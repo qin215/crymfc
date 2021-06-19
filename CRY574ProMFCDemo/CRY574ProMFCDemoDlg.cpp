@@ -6,6 +6,9 @@
 #include "CRY574ProMFCDemo.h"
 #include "CRY574ProMFCDemoDlg.h"
 #include "afxdialogex.h"
+#include "protocol.h"
+
+int String2HexData(const CString &in_str, UCHAR * outBuffer);
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,7 +55,7 @@ CCRY574ProMFCDemoDlg::CCRY574ProMFCDemoDlg(CWnd* pParent /*=NULL*/)
 	, m_bHex(TRUE)
 	, m_strSppCmd(_T("03 00 10 00 00 00 00 00 96 06 1b ac 00 01 02 03 04 05 06 07 08 09 0a 0b"))
 	, m_strATCmd(_T(""))
-	, m_strMacAddr(_T("5c:c6:e9:00:49:97 "))
+	, m_strMacAddr(_T("11:22:33:44:55:99"))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -626,6 +629,33 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButtonPair()
 	pcMac = NULL;
 }
 
+UINT32 parse_spp_rsp_data(const CString& strRSP)
+{
+	int nlen = strRSP.GetLength();
+	UCHAR *pbuff = new UCHAR[nlen];
+	UINT32 ret;
+
+	if (!pbuff)
+	{
+		AfxMessageBox(_T("没有内存"));
+		PostQuitMessage(0);
+	}
+
+	int binlen = String2HexData(strRSP, pbuff);
+
+	if (binlen <= 0)
+	{
+		AfxMessageBox(_T("返回值错误"));
+		PostQuitMessage(0);
+	}
+
+	ret = parse_race_cmd_rsp(pbuff, binlen);
+
+	delete pbuff;
+
+	return ret;
+}
+
 
 void CCRY574ProMFCDemoDlg::OnBnClickedButton2()
 {
@@ -636,16 +666,27 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton2()
 
 
 	char* pcRecv = new char[4096];
-	CRYBT_SPPCommand(data,pcRecv,1000, TRUE);
+	CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
 	CString strSPPRecv(pcRecv);
+
+	BOOL ok = parse_spp_rsp_data(strSPPRecv);
+	if (ok)
+	{
+		AfxMessageBox(_T("光感已校准"));
+	}
+	else
+	{
+		AfxMessageBox(_T("光感未校准"));
+	}
+
 	CString strInfo;
 	strInfo.Format(_T("SPP Recv:%s"),strSPPRecv);
-
-
 	UpdateInfo(strInfo);
+
 	delete pcRecv;
 	pcRecv = NULL;
 }
+
 
 
 void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
@@ -658,19 +699,173 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 	const char far_low_data[] = "05 5A 05 00 06 0E 00 0B 1E";
 
 	char* pcRecv = new char[4096];
-	CRYBT_SPPCommand(near_hi_data,pcRecv,1000, TRUE);
+	CRYBT_SPPCommand(near_hi_data, pcRecv, 1000, TRUE);
 	CString strSPPRecv(pcRecv);
 	CString strInfo;
-
-	CRYBT_SPPCommand(near_low_data,pcRecv,1000, TRUE);
-	strSPPRecv += _T("\n");
-	strSPPRecv += CString(pcRecv);
-
-	strInfo.Format(_T("SPP Recv:%s"),strSPPRecv);
-
+	strInfo.Format(_T("SPP NEAR HIGH8 Recv:%s"),strSPPRecv);
 	UpdateInfo(strInfo);
+
+	UINT32 near_data = parse_spp_rsp_data(strSPPRecv);
+	
+
+	CRYBT_SPPCommand(near_low_data, pcRecv, 1000, TRUE);
+	strSPPRecv = CString(pcRecv);
+	strInfo.Format(_T("SPP NEAR LOW8 Recv:%s"),strSPPRecv);
+	UpdateInfo(strInfo);
+
+	near_data <<= 8;
+	near_data |= parse_spp_rsp_data(strSPPRecv);
+
+	UINT32 far_data = CRYBT_SPPCommand(far_hi_data, pcRecv, 1000, TRUE);
+	strSPPRecv = CString(pcRecv);
+	strInfo.Format(_T("SPP far high8 Recv:%s"),strSPPRecv);
+	UpdateInfo(strInfo);
+
+	far_data <<= 8;
+
+	CRYBT_SPPCommand(far_low_data, pcRecv, 1000, TRUE);
+	strSPPRecv = CString(pcRecv);
+	strInfo.Format(_T("SPP far low8 Recv:%s"),strSPPRecv);
+	UpdateInfo(strInfo);
+	far_data |= parse_spp_rsp_data(strSPPRecv);
+
+	CString prompt;
+	prompt.Format(_T("入耳校准值为:0X%04X, 出耳校准值为：0x%04X"), near_data, far_data);
+
+	AfxMessageBox(prompt);
+
 	delete pcRecv;
 	pcRecv = NULL;
 
 
 }
+
+
+
+int Char2Int(TCHAR c)
+{
+	switch(c)
+	{
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+		return c-'0';
+		break;
+
+	case 'a':
+	case 'b':
+	case 'c':
+	case 'd':
+	case 'e':
+	case 'f':
+		return c-'a'+10;
+		break;
+	case 'A':
+	case 'B':
+	case 'C':
+	case 'D':
+	case 'E':
+	case 'F':
+		return c-'A'+10;
+		break;
+	default:
+		return 0xFFFFFFFF;
+
+	}
+
+}
+
+BYTE Hex2Char(BYTE data)
+{
+	BYTE hex= data&0x0f;
+
+	if(hex>=0x00 && hex<=0x09)
+		hex += '0';
+	else if(hex>=0x0a && hex<=0x0f)
+		hex += ('A'-0x0a);
+
+	return hex;
+}
+
+BYTE Char2Hex(BYTE hex) 
+{
+	if (hex>='a' && hex<='f')
+	{
+		hex -= 0x20;
+	}
+
+	if ((hex>='0' && hex<='9') || (hex>='A' && hex<='F'))
+	{
+		if(hex>='0' && hex<='9')
+			hex -= '0';
+		if(hex>='A' && hex<='F')
+			hex -= ('A' - 0x0A);
+		return hex;
+	}
+
+	return 0;
+}
+
+int String2HexData(const CString &in_str, UCHAR * outBuffer)
+{
+	int iLen, i;
+	int count;
+	TCHAR * p;
+
+	CString str = in_str;
+
+	iLen = str.GetLength();
+
+	str.Replace(_T(" "), _T(""));
+
+	p = str.GetBuffer(iLen);
+	for(i = 0, count = 0; i < iLen / 2; i++, count++)
+	{
+		int temp;
+
+		*outBuffer = 0;
+		temp = Char2Int(*p);
+		if( temp == 0xFFFFFFFF )
+			return count;
+		*outBuffer = temp;
+		p++;
+		*outBuffer <<= 4;
+		temp = Char2Int(*p);
+		if( temp == 0xFFFFFFFF )
+			return count;
+		*outBuffer |= temp;
+		p++;
+		*outBuffer++;
+	}
+
+	return count;
+}
+
+/*
+ * 二进制数据转为hex数据
+ */
+int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_len)
+{
+	int i;
+	int index;
+
+	if (out_len < len * 2)
+	{
+		return -1;
+	}
+
+	for (i = 0, index = 0; i < len; i++)
+	{
+		index += sprintf((char *)&outBuff[index], "%02X", inBuff[i]);
+	}
+
+	return index;
+}
+

@@ -42,6 +42,9 @@
     <ClInclude Include="CRY574ProAPIWrapper.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CRY574ProMFCDemo.cpp">
@@ -51,6 +54,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="protocol.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
