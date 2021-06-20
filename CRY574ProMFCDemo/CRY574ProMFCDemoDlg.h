@@ -7,6 +7,12 @@
 #include "afxwin.h"
 using namespace std;
 
+
+#define WM_UPDATE_STATIC (WM_USER + 100)  
+#define WM_UPDATE_STATUS (WM_USER + 101)
+
+#define AUTOTEST_TIMER_ID		1
+
 // CCRY574ProMFCDemoDlg ¶Ô»°¿ò
 class CCRY574ProMFCDemoDlg : public CDialogEx
 {
@@ -39,8 +45,28 @@ public:
 	CEdit m_editShow;
 	afx_msg void OnBnClickedButtonIni();
 
+
+
 private:
 	void UpdateInfo(CString strInfo);
+	LRESULT OnUpdatePrompt(WPARAM wParam, LPARAM lParam);
+	LRESULT OnUpdateStatus(WPARAM wParam, LPARAM lParam);
+
+	CButton m_button_start;
+	CEdit  m_edit_status;
+
+	CButton m_button_stop;
+
+	CBrush  m_SuccessBrushBack;
+	CBrush  m_FailBrushBack;
+	CBrush  m_ProcessBrushBack;
+
+	INT		m_state;
+
+	CStatic m_cali_status;
+	CStatic m_cali_value;
+
+
 public:
 	afx_msg void OnBnClickedButtonInquiry1();
 	afx_msg void OnBnClickedButtonInquiry2();
@@ -66,4 +92,13 @@ public:
 	afx_msg void OnBnClickedButtonPair();
 	afx_msg void OnBnClickedButton2();
 	afx_msg void OnBnClickedButton3();
+
+	
+	afx_msg void OnBnClickedButton4();
+	afx_msg void OnUpdateUIState(UINT /*nAction*/, UINT /*nUIElement*/);
+	afx_msg void OnBnClickedButtonStop();
+
+
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

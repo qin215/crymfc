@@ -2,3 +2,4 @@ Debug/
 ipch/
 *.obj
 log/
+Release/

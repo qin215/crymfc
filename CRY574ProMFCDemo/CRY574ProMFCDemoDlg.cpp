@@ -15,7 +15,7 @@ int String2HexData(const CString &in_str, UCHAR * outBuffer);
 #endif
 #include "CRY574ProAPIWrapper.h"
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
-#define API_OK 0
+
 class CAboutDlg : public CDialogEx
 {
 public:
@@ -50,6 +50,7 @@ END_MESSAGE_MAP()
 
 
 
+
 CCRY574ProMFCDemoDlg::CCRY574ProMFCDemoDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CCRY574ProMFCDemoDlg::IDD, pParent)
 	, m_bHex(TRUE)
@@ -68,6 +69,14 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_HEX, m_bHex);
 	DDX_Text(pDX, IDC_EDIT_SPPCMD, m_strSppCmd);
 	DDX_Text(pDX, IDC_EDIT_MACADDR, m_strMacAddr);
+
+	DDX_Control(pDX, IDC_BUTTON4, m_button_start);
+	DDX_Control(pDX, IDC_EDIT_STATUS, m_edit_status);
+
+	DDX_Control(pDX, IDC_BUTTON_STOP, m_button_stop);
+
+	DDX_Control(pDX, IDC_STATIC_CALI_STATUS, m_cali_status);
+	DDX_Control(pDX, IDC_STATIC_CALI_VALUE, m_cali_value);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -95,6 +104,14 @@ BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_PAIR, &CCRY574ProMFCDemoDlg::OnBnClickedButtonPair)
 	ON_BN_CLICKED(IDC_BUTTON2, &CCRY574ProMFCDemoDlg::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CCRY574ProMFCDemoDlg::OnBnClickedButton3)
+	ON_MESSAGE(WM_UPDATE_STATIC, &CCRY574ProMFCDemoDlg::OnUpdatePrompt)
+	ON_BN_CLICKED(IDC_BUTTON4, &CCRY574ProMFCDemoDlg::OnBnClickedButton4)
+	ON_WM_UPDATEUISTATE()
+	ON_BN_CLICKED(IDC_BUTTON_STOP, &CCRY574ProMFCDemoDlg::OnBnClickedButtonStop)
+	ON_MESSAGE(WM_UPDATE_STATUS, &CCRY574ProMFCDemoDlg::OnUpdateStatus)
+	
+	ON_WM_CTLCOLOR()
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -168,6 +185,65 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	unsigned char o[10] = {0};
 	
 	Test(p,o,10);
+
+	psensor_check_process();
+
+	const UINT16 control_ids[] =
+	{
+		IDC_BUTTON_INQUIRY2,
+		IDC_BUTTON_INQUIRY3,
+		IDC_BUTTON_MACCON,
+		IDC_BUTTON_AUTOCON,
+		IDC_BUTTON_DISCON,
+		IDC_BUTTON_A2DP,
+		IDC_BUTTON_GETINFO,
+		IDC_BUTTON_HFP,
+		IDC_BUTTON_RELEASE,
+		IDC_BUTTON7,
+		IDC_BUTTON_BREAK,
+		IDC_BUTTON_SENDAT,
+		IDC_EDIT1,
+		IDC_EDIT_ATCMD,
+		IDC_BUTTON_SPP,
+		IDC_BUTTON_SPP_CONFIG,
+		IDC_BUTTON_DISCONNECT_SPP,
+		IDC_BUTTON_SENDSPP,
+		IDC_EDIT_SPPCMD,
+		IDC_CHECK1,
+		IDC_CHECK_HEX,
+		IDC_EDIT2,
+		IDC_EDIT_MACADDR,
+		IDC_BUTTON1,
+		IDC_BUTTON_PAIR,
+		IDC_BUTTON2,
+		IDC_BUTTON3,
+		IDC_BUTTON_INI,
+		IDC_BUTTON_INQUIRY1
+	};
+
+	for (int i = 0; i < sizeof(control_ids) / sizeof(UINT16); i++)
+	{
+		CWnd *pwnd = (CWnd *)GetDlgItem(control_ids[i]);
+		pwnd->ShowWindow(SW_HIDE);
+	}
+
+	m_SuccessBrushBack.CreateSolidBrush(RGB(0,255,0)); 
+	m_FailBrushBack.CreateSolidBrush(RGB(255,0,0));
+	m_ProcessBrushBack.CreateSolidBrush(RGB(200, 200, 200));
+	m_state = STATE_INIT;
+
+	static CFont font;
+	font.DeleteObject();
+	font.CreatePointFont(300, _T("新宋体"));
+	m_edit_status.SetFont(&font);//设置字体
+
+	m_edit_status.SetWindowTextW(_T("测试中...."));
+
+	::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
+
+	 SetTimer(AUTOTEST_TIMER_ID, 1000, 0);  //这里就相当于设定了timer,如果要停掉timer就是KillTimer(TIMERID)
+
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -233,8 +309,17 @@ HCURSOR CCRY574ProMFCDemoDlg::OnQueryDragIcon()
 void CCRY574ProMFCDemoDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
-	
-	// TODO: 在此处添加消息处理程序代码
+	int count = 0;
+
+	bStopped = TRUE;
+
+	CRYBT_SetBreak();
+
+	while (bRunning)
+	{
+		Sleep(500);
+		count++;
+	}
 }
 
 
@@ -629,37 +714,8 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButtonPair()
 	pcMac = NULL;
 }
 
-UINT32 parse_spp_rsp_data(const CString& strRSP)
-{
-	int nlen = strRSP.GetLength();
-	UCHAR *pbuff = new UCHAR[nlen];
-	UINT32 ret;
-
-	if (!pbuff)
-	{
-		AfxMessageBox(_T("没有内存"));
-		PostQuitMessage(0);
-	}
-
-	int binlen = String2HexData(strRSP, pbuff);
-
-	if (binlen <= 0)
-	{
-		AfxMessageBox(_T("返回值错误"));
-		PostQuitMessage(0);
-	}
-
-	ret = parse_race_cmd_rsp(pbuff, binlen);
-
-	delete pbuff;
-
-	return ret;
-}
-
-
 void CCRY574ProMFCDemoDlg::OnBnClickedButton2()
 {
-	// TODO: 在此添加控件通知处理程序代码
 	UpdateData(TRUE);
 
 	const char data[] = "05 5A 05 00 06 0E 00 0B 17";
@@ -736,136 +792,165 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 
 	delete pcRecv;
 	pcRecv = NULL;
-
-
 }
 
 
-
-int Char2Int(TCHAR c)
+LRESULT CCRY574ProMFCDemoDlg::OnUpdatePrompt(WPARAM wParam, LPARAM lParam)
 {
-	switch(c)
+	CString *pText = (CString *)wParam;
+	BOOL bDelete = (BOOL)lParam;
+
+	CString infoText;
+	infoText = _T("INFO: ") + CString(*pText);
+	UpdateInfo(infoText);
+
+	if (bDelete)
 	{
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-		return c-'0';
-		break;
-
-	case 'a':
-	case 'b':
-	case 'c':
-	case 'd':
-	case 'e':
-	case 'f':
-		return c-'a'+10;
-		break;
-	case 'A':
-	case 'B':
-	case 'C':
-	case 'D':
-	case 'E':
-	case 'F':
-		return c-'A'+10;
-		break;
-	default:
-		return 0xFFFFFFFF;
-
+		delete pText;
 	}
 
+	if (bRunning)
+	{
+		m_button_start.EnableWindow(FALSE);
+		m_button_stop.EnableWindow(TRUE);
+	}
+	else
+	{
+		m_button_start.EnableWindow(TRUE);
+		m_button_stop.EnableWindow(FALSE);
+	}
+	
+	return 0;
 }
 
-BYTE Hex2Char(BYTE data)
+
+void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 {
-	BYTE hex= data&0x0f;
+	// TODO: 在此添加控件通知处理程序代码
+	if (bRunning)
+	{
+		AfxMessageBox(_T("正在测试，请等待"));
+		return;
+	}
 
-	if(hex>=0x00 && hex<=0x09)
-		hex += '0';
-	else if(hex>=0x0a && hex<=0x0f)
-		hex += ('A'-0x0a);
+	m_edit_status.SetWindowText(_T("测试中..."));
+	m_state = STATE_INIT;
+	m_cali_status.SetWindowText(_T("待定"));
+	m_cali_value.SetWindowText(_T("待定"));
 
-	return hex;
+
+	psensor_check_process();
 }
 
-BYTE Char2Hex(BYTE hex) 
+
+void CCRY574ProMFCDemoDlg::OnUpdateUIState(UINT /*nAction*/, UINT /*nUIElement*/)
 {
-	if (hex>='a' && hex<='f')
+	// 该功能要求使用 Windows 2000 或更高版本。
+	// 符号 _WIN32_WINNT 和 WINVER 必须 >= 0x0500。
+	// TODO: 在此处添加消息处理程序代码
+}
+
+
+void CCRY574ProMFCDemoDlg::OnBnClickedButtonStop()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	if (!bRunning)
 	{
-		hex -= 0x20;
+		return;
 	}
 
-	if ((hex>='0' && hex<='9') || (hex>='A' && hex<='F'))
+	bStopped = TRUE;
+
+	while (bRunning)
 	{
-		if(hex>='0' && hex<='9')
-			hex -= '0';
-		if(hex>='A' && hex<='F')
-			hex -= ('A' - 0x0A);
-		return hex;
+		Sleep(500);
 	}
+}
+
+
+LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
+{
+	m_state = wParam;
+	CString *pInfo = (CString *)lParam;
+
+	if (m_state == STATE_SUCCESS)
+	{
+		m_edit_status.SetWindowText(_T("成功"));
+	}
+	else if (m_state == STATE_FAIL)
+	{
+		m_edit_status.SetWindowText(_T("失败"));
+	}
+	else if (m_state == STATE_ERROR)
+	{
+		m_edit_status.SetWindowText(_T("错误"));
+	}
+	else if (m_state == STATE_PROCESS)
+	{
+		m_edit_status.SetWindowText(_T("测试中..."));
+	}
+	else if (m_state == STATE_ABORT)
+	{
+		m_edit_status.SetWindowText(_T("终止中..."));
+	}
+	else if (m_state == STATE_DONE)
+	{
+		::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
+	}
+	else if (m_state == STATE_CALI_STATUS)
+	{
+		m_cali_status.SetWindowText(CString(*pInfo));
+	}
+	else if (m_state == STATE_CALI_VALUE)
+	{
+		m_cali_value.SetWindowText(CString(*pInfo));
+	}
+
+	delete pInfo;
 
 	return 0;
 }
 
-int String2HexData(const CString &in_str, UCHAR * outBuffer)
+HBRUSH CCRY574ProMFCDemoDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
-	int iLen, i;
-	int count;
-	TCHAR * p;
-
-	CString str = in_str;
-
-	iLen = str.GetLength();
-
-	str.Replace(_T(" "), _T(""));
-
-	p = str.GetBuffer(iLen);
-	for(i = 0, count = 0; i < iLen / 2; i++, count++)
+	if (nCtlColor == CTLCOLOR_STATIC && m_edit_status.GetSafeHwnd() == pWnd->GetSafeHwnd()) 
 	{
-		int temp;
+		if (m_state == STATE_INIT)
+		{
+			pDC->SetTextColor(RGB(255,255,255));
+			return m_ProcessBrushBack;
+		}
+		else if (m_state == STATE_SUCCESS)
+		{
+			pDC->SetTextColor(RGB(0,0,0));
+			return m_SuccessBrushBack;
+		}
+		else
+		{
+			pDC->SetTextColor(RGB(0,0,0));
+			return m_FailBrushBack;
+		}
 
-		*outBuffer = 0;
-		temp = Char2Int(*p);
-		if( temp == 0xFFFFFFFF )
-			return count;
-		*outBuffer = temp;
-		p++;
-		*outBuffer <<= 4;
-		temp = Char2Int(*p);
-		if( temp == 0xFFFFFFFF )
-			return count;
-		*outBuffer |= temp;
-		p++;
-		*outBuffer++;
 	}
 
-	return count;
+
+	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+	return hbr;
 }
 
-/*
- * 二进制数据转为hex数据
- */
-int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_len)
+
+void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 {
-	int i;
-	int index;
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
 
-	if (out_len < len * 2)
+	CDialogEx::OnTimer(nIDEvent);
+
+	if (nIDEvent == AUTOTEST_TIMER_ID)
 	{
-		return -1;
+		if (!bRunning)
+		{
+			psensor_check_process();
+		}
 	}
-
-	for (i = 0, index = 0; i < len; i++)
-	{
-		index += sprintf((char *)&outBuff[index], "%02X", inBuff[i]);
-	}
-
-	return index;
 }
-
