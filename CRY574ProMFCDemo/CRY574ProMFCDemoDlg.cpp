@@ -7,6 +7,7 @@
 #include "CRY574ProMFCDemoDlg.h"
 #include "afxdialogex.h"
 #include "protocol.h"
+#include "mywin.h"
 
 int String2HexData(const CString &in_str, UCHAR * outBuffer);
 
@@ -59,6 +60,9 @@ CCRY574ProMFCDemoDlg::CCRY574ProMFCDemoDlg(CWnd* pParent /*=NULL*/)
 	, m_strMacAddr(_T("11:22:33:44:55:99"))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+
+	m_test_total = 0;
+	m_test_ok_nr = 0;
 }
 
 void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
@@ -77,6 +81,11 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_STATIC_CALI_STATUS, m_cali_status);
 	DDX_Control(pDX, IDC_STATIC_CALI_VALUE, m_cali_value);
+
+	DDX_Check(pDX, IDC_CHECK_AUTOTEST, m_auto_test);
+
+	DDX_Text(pDX, IDC_STATIC_TOTAL, m_test_total);
+	DDX_Text(pDX, IDC_STATIC_OK_NUMBER, m_test_ok_nr);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -186,8 +195,6 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	
 	Test(p,o,10);
 
-	psensor_check_process();
-
 	const UINT16 control_ids[] =
 	{
 		IDC_BUTTON_INQUIRY2,
@@ -239,10 +246,31 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 	m_edit_status.SetWindowTextW(_T("测试中...."));
 
-	::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
+	//::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
 
-	 SetTimer(AUTOTEST_TIMER_ID, 1000, 0);  //这里就相当于设定了timer,如果要停掉timer就是KillTimer(TIMERID)
+	m_auto_test = FALSE;
 
+	m_test_total = 0;
+	m_test_ok_nr = 0;
+
+	if (CRYBT_InitializePro() == TRUE)
+	{
+		dlg_update_ui(_T("初始化完成"));
+	}
+	else
+	{
+		dlg_update_ui(_T("初始化失败"));
+		bRunning = FALSE;
+		dlg_update_status_ui(STATE_ERROR);
+	
+		AfxMessageBox(_T("初始化失败，请检查DONGLE!"));
+
+		PostQuitMessage(0);
+	}
+
+	enable_log_file();
+	enable_console_window();
+	SetTimer(AUTOTEST_TIMER_ID, 1000, 0);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -310,6 +338,7 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
 	int count = 0;
+	int retcode;
 
 	bStopped = TRUE;
 
@@ -320,6 +349,10 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 		Sleep(500);
 		count++;
 	}
+
+	CRYBT_Release();
+
+	close_logfile();
 }
 
 
@@ -838,8 +871,10 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 	m_cali_status.SetWindowText(_T("待定"));
 	m_cali_value.SetWindowText(_T("待定"));
 
-
+	bStopped = FALSE;
 	psensor_check_process();
+	m_test_total++;
+	UpdateData(FALSE);
 }
 
 
@@ -877,6 +912,8 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 	if (m_state == STATE_SUCCESS)
 	{
 		m_edit_status.SetWindowText(_T("成功"));
+		m_test_ok_nr++;
+		UpdateData(FALSE);
 	}
 	else if (m_state == STATE_FAIL)
 	{
@@ -926,12 +963,11 @@ HBRUSH CCRY574ProMFCDemoDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 			pDC->SetTextColor(RGB(0,0,0));
 			return m_SuccessBrushBack;
 		}
-		else
+		else if (m_state == STATE_FAIL || m_state == STATE_ERROR || m_state == STATE_ABORT)
 		{
 			pDC->SetTextColor(RGB(0,0,0));
 			return m_FailBrushBack;
 		}
-
 	}
 
 
@@ -945,12 +981,29 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 
 	CDialogEx::OnTimer(nIDEvent);
+	static int count = 0;
 
+	
+	UpdateData(TRUE);
 	if (nIDEvent == AUTOTEST_TIMER_ID)
 	{
 		if (!bRunning)
 		{
-			psensor_check_process();
+			count++;
+			if (count >= 3)		// 延迟两秒
+			{
+				if (m_auto_test && !bStopped)
+				{
+					psensor_check_process();
+					m_test_total++;
+				}
+			}
+		}
+		else
+		{
+			count = 0;
 		}
 	}
+
+	UpdateData(FALSE);
 }

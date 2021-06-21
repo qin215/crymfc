@@ -66,6 +66,11 @@ private:
 	CStatic m_cali_status;
 	CStatic m_cali_value;
 
+	BOOL m_auto_test;
+
+	INT m_test_total;
+	INT m_test_ok_nr;
+
 
 public:
 	afx_msg void OnBnClickedButtonInquiry1();

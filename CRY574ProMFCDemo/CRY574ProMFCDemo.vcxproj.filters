@@ -46,6 +46,12 @@
     <ClInclude Include="protocol.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="mywin.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="qcloud_iot_export_log.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CRY574ProMFCDemo.cpp">
@@ -58,6 +64,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="protocol.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="logfile.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL_OS_win32.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -7,6 +7,7 @@
 #include "CRY574ProMFCDemoDlg.h"
 #include "afxdialogex.h"
 #include "protocol.h"
+#include "mywin.h"
 
 #pragma pack(push)
 #pragma pack(1)
@@ -26,7 +27,7 @@ BOOL bStopped = TRUE;
 BOOL bRunning = FALSE;
 
 CWinThread *pWorkThread;
-
+CString current_bt_device;
 
 
 
@@ -186,12 +187,13 @@ CString begin_inquiry_bt_device()
 	CString strInfo;
 	int maxRssi = -1000;
 	CString btDevice;
+	int retcode;
 		
 	strInfo.Format(_T("正在搜寻蓝牙设备"));
 	dlg_update_ui(strInfo);
 
-	CRYBT_InquiryAllOneTime(5, FALSE, nInqCount);
-
+	retcode = CRYBT_InquiryAllOneTime(5, FALSE, nInqCount);
+	Log_d(_T("CRYBT_InquiryAllOneTime retcode=%d"), retcode);
 	strInfo.Format(_T("%d BT devices has been inquiried"), nInqCount);
 	dlg_update_ui(strInfo);
 
@@ -218,7 +220,9 @@ CString begin_inquiry_bt_device()
 	}
 
 	strInfo.Format(_T("MAX RSSI:%d, MAC:%s "), maxRssi, btDevice);
+	Log_d(_T("found bt device(%s) rssi=%d"), btDevice, maxRssi);
 	dlg_update_ui(strInfo);
+	
 
 	return btDevice;
 }
@@ -249,7 +253,7 @@ BOOL connect_bt_device(const CString& device)
 	{
 		info.Format(_T("连接蓝牙(%s)错误： %d"),device, retCode);
 	}
-
+	Log_d(_T("CRYBT_MacConnect retcode=%d"), retCode);
 	dlg_update_ui(info);
 
 	delete [] pcMac;
@@ -282,14 +286,14 @@ BOOL check_bt_name()
 		strinfo.Format(_T("error code is %d"),retCode);
 	}
 
+	Log_d(_T("CRYBT_QuiryName retcode=%d"), retCode);
+
 	dlg_update_ui(strinfo);
 	delete pcName;
 	pcName = NULL;
 
 	return ret;
 }
-
-
 
 BOOL connect_bt_spp(const CString& device)
 {
@@ -304,6 +308,8 @@ BOOL connect_bt_spp(const CString& device)
 	}
 	pcMac[len] = '\0';
 
+	Sleep(1000);
+
 	int retCode = CRYBT_ConnectSPP(pcMac);
 	if (retCode == API_OK)
 	{
@@ -313,6 +319,7 @@ BOOL connect_bt_spp(const CString& device)
 	else
 	{
 		info.Format(_T("error code is %d"),retCode);
+		Log_d(_T("connect spp retcode=%d"), retCode);
 	}
 
 	dlg_update_ui(info);
@@ -327,9 +334,11 @@ BOOL check_psensor_calibrated()
 {
 	const char data[] = "05 5A 05 00 06 0E 00 0B 17";
 	BOOL ret = FALSE;
+	INT retcode;
 
 	char* pcRecv = new char[4096];
-	CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
+	retcode = CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	CString strSPPRecv(pcRecv);
 
 	BOOL ok = parse_spp_rsp_data(strSPPRecv);
@@ -338,12 +347,14 @@ BOOL check_psensor_calibrated()
 		//AfxMessageBox(_T("光感已校准"));
 		ret = TRUE;
 		dlg_update_status_ui(STATE_CALI_STATUS, _T("已校准"));
+		Log_d(_T("device %s is calibrated"), current_bt_device);
 	}
 	else
 	{
-		//AfxMessageBox(_T("光感未校准"));
 		dlg_update_status_ui(STATE_FAIL);
 		dlg_update_status_ui(STATE_CALI_STATUS, _T("未校准"));
+		Log_d(_T("device %s is NOT calibrated"), current_bt_device);
+		AfxMessageBox(_T("光感未校准"));
 	}
 
 	CString strInfo;
@@ -365,9 +376,11 @@ void check_psensor_cali_value()
 	const char far_low_data[] = "05 5A 05 00 06 0E 00 0B 1E";
 
 	char* pcRecv = new char[4096];
+	INT retcode;
 
 	// 入耳数据
-	CRYBT_SPPCommand(near_hi_data, pcRecv, 1000, TRUE);
+	retcode = CRYBT_SPPCommand(near_hi_data, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	CString strSPPRecv(pcRecv);
 	CString strInfo;
 
@@ -376,7 +389,8 @@ void check_psensor_cali_value()
 	dlg_update_ui(strInfo);
 	near_data <<= 8;
 
-	CRYBT_SPPCommand(near_low_data, pcRecv, 1000, TRUE);
+	retcode = CRYBT_SPPCommand(near_low_data, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
 
 	near_data |= parse_spp_rsp_data(strSPPRecv);
@@ -385,7 +399,9 @@ void check_psensor_cali_value()
 	// 入耳数据 结束
 
 	// 出耳数据
-	UINT32 far_data = CRYBT_SPPCommand(far_hi_data, pcRecv, 1000, TRUE);
+	UINT32 far_data;
+	retcode = CRYBT_SPPCommand(far_hi_data, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
 
 	far_data = parse_spp_rsp_data(strSPPRecv);
@@ -394,7 +410,8 @@ void check_psensor_cali_value()
 
 	far_data <<= 8;
 
-	CRYBT_SPPCommand(far_low_data, pcRecv, 1000, TRUE);
+	retcode = CRYBT_SPPCommand(far_low_data, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
 	far_data |= parse_spp_rsp_data(strSPPRecv);
 	strInfo.Format(_T("SPP far low8 Recv:%s"),strSPPRecv);
@@ -406,17 +423,20 @@ void check_psensor_cali_value()
 	if ((near_data < far_data) || (near_data - far_data <= 0x100))
 	{
 		prompt.Format(_T("入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准失败！"), near_data, far_data);
+		dlg_update_status_ui(STATE_CALI_VALUE, prompt);
 		dlg_update_status_ui(STATE_FAIL);
+		Log_d(_T("in ear value=0x%04x, out ear value=0x%04x, FAILED."), near_data, far_data);
+		AfxMessageBox(prompt);
 	}
 	else
 	{
 		prompt.Format(_T("入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准成功！"), near_data, far_data);
+		Log_d(_T("in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), near_data, far_data);
 		dlg_update_status_ui(STATE_CALI_VALUE, prompt);
 		dlg_update_status_ui(STATE_SUCCESS);
 	}
 
-	//AfxMessageBox(prompt);
-
+	//
 	delete pcRecv;
 	pcRecv = NULL;
 }
@@ -450,6 +470,7 @@ UINT32 parse_spp_rsp_data(CString& strRSP)
 
 	// 删除多余的0
 	strRSP = strRSP.Left(3 * 15);
+	Log_d(_T("recv spp data='%s'"), strRSP);
 
 	return ret;
 }
@@ -458,40 +479,42 @@ UINT32 parse_spp_rsp_data(CString& strRSP)
 
 
 // 线程运行程序
+//CRYBT_InitializePro
+// CRYBT_ResetDongle
+//
+
 UINT thread_process(LPVOID)
 {
-	CString btdevice;
 	CString info;
 	int retcode;
 	int ret = -1;
 	int i;
+	CString btdevice;
 
+	current_bt_device.Empty();
 
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
-	if (CRYBT_InitializePro() == TRUE)
-	{
-		dlg_update_ui(_T("初始化完成"));
-	}
-	else
-	{
-		dlg_update_ui(_T("初始化失败"));
-		bRunning = FALSE;
-		dlg_update_status_ui(STATE_ERROR);
-		dlg_update_status_ui(STATE_DONE);
-		return ret;
-	}
-
-	CRYBT_ResetDongle();
+	
+	retcode = CRYBT_ResetDongle();
+	Log_d(_T("reset dongle retcode=%d"), retcode);
 
 	for (i = 0; i < 10; i++)
 	{
 		btdevice = begin_inquiry_bt_device();
+		if (bStopped)
+		{
+			i = 10;
+			dlg_update_status_ui(STATE_ABORT);
+			break;
+		}
+
 		if (btdevice.IsEmpty())
 		{
 			continue;
 		}
 
+		Log_d(_T("bt device mac: %s"), btdevice);
 		if (!connect_bt_device(btdevice))
 		{
 			continue;
@@ -499,18 +522,12 @@ UINT thread_process(LPVOID)
 
 		if (check_bt_name())
 		{
+			current_bt_device = btdevice;
 			break;
 		}
 		else
 		{
-			CRYBT_DisConnectSPP();
-		}
-
-		if (bStopped)
-		{
-			i = 10;
-			dlg_update_status_ui(STATE_ABORT);
-			break;
+			goto disconn_bt;
 		}
 	}
 
@@ -520,16 +537,17 @@ UINT thread_process(LPVOID)
 	}
 
 	// TODO: 在此添加控件通知处理程序代码
-	CRYBT_SetDefaultProfile(1);
+	retcode = CRYBT_SetDefaultProfile(1);
+	Log_d(_T("CRYBT_SetDefaultProfile retcode=%d"), retcode);
 	dlg_update_ui(_T("配置SPP成功"));
 
-	if (bStopped || !connect_bt_spp(btdevice))
+	if (!connect_bt_spp(btdevice))
 	{
 		dlg_update_status_ui(STATE_ABORT);
 		goto disconn_bt;
 	}
 
-	if (!bStopped && check_psensor_calibrated())
+	if (check_psensor_calibrated())
 	{
 		check_psensor_cali_value();
 	}
@@ -546,6 +564,8 @@ disconn_spp:
 		info.Format(_T("error code is %d"),retcode);
 	}
 
+	Log_d(_T("CRYBT_DisConnectSPP retcode=%d"), retcode);
+
 	dlg_update_ui(info);
 
 disconn_bt:
@@ -558,10 +578,12 @@ disconn_bt:
 		info.Format(_T("error code is %d"),retcode);
 	}
 	dlg_update_ui(info);
+	Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
 
 close_bt:
-	CRYBT_Release();
-	
+	retcode = CRYBT_ResetDongle();
+	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
+
 	dlg_update_ui(_T("done!"));
 	dlg_update_status_ui(STATE_DONE);
 
