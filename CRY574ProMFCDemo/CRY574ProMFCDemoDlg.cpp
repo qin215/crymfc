@@ -272,6 +272,10 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	enable_console_window();
 	SetTimer(AUTOTEST_TIMER_ID, 1000, 0);
 
+	int retcode;
+	retcode = CRYBT_ResetDongle();
+	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -1006,4 +1010,15 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 
 	UpdateData(FALSE);
+
+	if (bRunning)
+	{
+		m_button_start.EnableWindow(FALSE);
+		m_button_stop.EnableWindow(TRUE);
+	}
+	else
+	{
+		m_button_start.EnableWindow(TRUE);
+		m_button_stop.EnableWindow(FALSE);
+	}
 }

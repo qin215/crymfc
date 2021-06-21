@@ -354,7 +354,7 @@ BOOL check_psensor_calibrated()
 		dlg_update_status_ui(STATE_FAIL);
 		dlg_update_status_ui(STATE_CALI_STATUS, _T("未校准"));
 		Log_d(_T("device %s is NOT calibrated"), current_bt_device);
-		AfxMessageBox(_T("光感未校准"));
+	//	AfxMessageBox(_T("光感未校准"));
 	}
 
 	CString strInfo;
@@ -426,7 +426,7 @@ void check_psensor_cali_value()
 		dlg_update_status_ui(STATE_CALI_VALUE, prompt);
 		dlg_update_status_ui(STATE_FAIL);
 		Log_d(_T("in ear value=0x%04x, out ear value=0x%04x, FAILED."), near_data, far_data);
-		AfxMessageBox(prompt);
+		//AfxMessageBox(prompt);
 	}
 	else
 	{
@@ -496,8 +496,8 @@ UINT thread_process(LPVOID)
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
 	
-	retcode = CRYBT_ResetDongle();
-	Log_d(_T("reset dongle retcode=%d"), retcode);
+	//retcode = CRYBT_ResetDongle();
+	//Log_d(_T("reset dongle retcode=%d"), retcode);
 
 	for (i = 0; i < 10; i++)
 	{
@@ -581,8 +581,8 @@ disconn_bt:
 	Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
 
 close_bt:
-	retcode = CRYBT_ResetDongle();
-	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
+	//retcode = CRYBT_ResetDongle();
+	//Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
 
 	dlg_update_ui(_T("done!"));
 	dlg_update_status_ui(STATE_DONE);
