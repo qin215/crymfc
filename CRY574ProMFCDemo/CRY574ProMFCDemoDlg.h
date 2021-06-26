@@ -5,6 +5,7 @@
 #pragma once
 #include <vector>
 #include "afxwin.h"
+#include "protocol.h"
 using namespace std;
 
 
@@ -52,6 +53,8 @@ private:
 	LRESULT OnUpdatePrompt(WPARAM wParam, LPARAM lParam);
 	LRESULT OnUpdateStatus(WPARAM wParam, LPARAM lParam);
 
+	BOOL UpdatePsensorData(psensor_cali_struct *pdata);
+
 	CButton m_button_start;
 	CEdit  m_edit_status;
 
@@ -63,8 +66,13 @@ private:
 
 	INT		m_state;
 
-	CStatic m_cali_status;
-	CStatic m_cali_value;
+	CStatic m_left_cali_status;
+	CStatic m_left_cali_value;
+
+	CStatic m_right_cali_status;
+	CStatic m_right_cali_value;
+
+	CComboBox m_combox;
 
 	BOOL m_auto_test;
 

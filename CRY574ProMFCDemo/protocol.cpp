@@ -442,6 +442,54 @@ void check_psensor_cali_value()
 }
 
 
+// 第二版本，发送一次指令
+BOOL check_psensor_calibrated_2()
+{
+	const char tws_cali_data_cmd[] = "05 5A 05 00 00 20 00 0B 30";
+	BOOL ret = FALSE;
+
+	char* pcRecv = new char[4096];
+	INT retcode;
+
+	// 入耳数据
+	retcode = CRYBT_SPPCommand(tws_cali_data_cmd, pcRecv, 1000, TRUE);
+	Log_d(_T("send spp cmd retcode=%d"), retcode);
+	CString strSPPRecv(pcRecv);
+	CString strInfo;
+	psensor_cali_data_t left;
+	psensor_cali_data_t right;
+
+	ret = parse_spp_rsp_data_2(strSPPRecv, &left, &right);
+	strInfo.Format(_T("SPP TWS Recv:%s"),strSPPRecv);
+	dlg_update_ui(strInfo);
+	if (!ret)
+	{
+		strInfo.Format(_T("spp TWS CMD error, please check sw version > V2.9"));
+		dlg_update_ui(strInfo);
+		goto done;
+	}
+
+	/* 数据传递给主线程 */
+	UCHAR *data_ptr = new UCHAR[2 * sizeof(psensor_cali_data_t)];
+
+	if (!data_ptr)
+	{
+		ASSERT(FALSE);
+	}
+
+	memcpy(data_ptr, &left, sizeof(psensor_cali_data_t));
+	UCHAR *tmp = data_ptr + sizeof(psensor_cali_data_t);
+	memcpy(tmp, &right, sizeof(psensor_cali_data_t));
+
+	dlg_update_status_data(STATE_TWS_CALI_DATA, (void *)data_ptr);
+	ret = TRUE;
+done:
+	delete pcRecv;
+	
+	return ret;
+}
+
+
 UINT32 parse_spp_rsp_data(CString& strRSP)
 {
 	int nlen = strRSP.GetLength();
@@ -476,6 +524,70 @@ UINT32 parse_spp_rsp_data(CString& strRSP)
 }
 
 
+BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone, 
+							psensor_cali_data_t *right_earphone)
+{
+	int nlen = strRSP.GetLength();
+	UCHAR *pbuff = new UCHAR[nlen];
+	BOOL ret = FALSE;
+
+	if (!pbuff)
+	{
+		bStopped = TRUE;
+		AfxMessageBox(_T("没有内存"));
+		PostQuitMessage(0);
+	}
+
+	int binlen = String2HexData(strRSP, pbuff);
+
+	if (binlen <= 0)
+	{
+		bStopped = TRUE;
+		AfxMessageBox(_T("返回值错误"));
+		PostQuitMessage(0);
+	}
+
+	onewire_frame_t *pFrame = (onewire_frame_t *)pbuff;
+	BOOL valid = FALSE;
+	// 05 5A 05 00 00 20 00 0B 03
+
+	uint16_t len = pFrame->len;
+	len += 4;			// added length & header & type
+	if (len <= binlen)
+	{
+		valid = TRUE;
+	}
+
+	if (!valid)
+	{
+		printf("qin spp format error!");
+		goto done;
+	}
+	
+	if (pFrame->param[0] == 0)
+	{
+		Log_e(_T("qin spp rsp error, earphone sw not support!"));
+		goto done;
+	}
+
+	UCHAR *ptr = &pFrame->param[0];
+	ptr++;
+
+	*left_earphone = *((struct psensor_cali_struct *)ptr);
+	ptr += sizeof(struct psensor_cali_struct);
+	*right_earphone = *((struct psensor_cali_struct *)ptr);
+	ret = TRUE;
+
+
+done:
+	delete pbuff;
+
+	// 删除多余的0
+	strRSP = strRSP.Left(3 * len);
+	Log_d(_T("recv spp data='%s'"), strRSP);
+
+	return ret;
+}
 
 
 // 线程运行程序
@@ -547,9 +659,8 @@ UINT thread_process(LPVOID)
 		goto disconn_bt;
 	}
 
-	if (check_psensor_calibrated())
+	if (check_psensor_calibrated_2())
 	{
-		check_psensor_cali_value();
 	}
 
 	ret = 0;
@@ -651,5 +762,18 @@ void dlg_update_status_ui(INT state, const CString& info)
 		}
 
 		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATUS, (WPARAM)state, (LPARAM)pInfoText);
+	}
+}
+
+
+/*
+ * 更新主线程中的UI显示
+ */
+void dlg_update_status_data(INT state, void *data_ptr)
+{
+	CCRY574ProMFCDemoDlg * pDlg = (CCRY574ProMFCDemoDlg *)AfxGetMainWnd();
+	if (pDlg)
+	{
+		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATUS, (WPARAM)state, (LPARAM)data_ptr);
 	}
 }

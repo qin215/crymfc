@@ -79,13 +79,18 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_BUTTON_STOP, m_button_stop);
 
-	DDX_Control(pDX, IDC_STATIC_CALI_STATUS, m_cali_status);
-	DDX_Control(pDX, IDC_STATIC_CALI_VALUE, m_cali_value);
+	DDX_Control(pDX, IDC_LEFT_CALI_STATUS, m_left_cali_status);
+	DDX_Control(pDX, IDC_LEFT_CALI_VALUE, m_left_cali_value);
+
+	DDX_Control(pDX, IDC_RIGHT_CALI_STATUS, m_right_cali_status);
+	DDX_Control(pDX, IDC_RIGHT_CALI_VALUE, m_right_cali_value);
 
 	DDX_Check(pDX, IDC_CHECK_AUTOTEST, m_auto_test);
 
 	DDX_Text(pDX, IDC_STATIC_TOTAL, m_test_total);
 	DDX_Text(pDX, IDC_STATIC_OK_NUMBER, m_test_ok_nr);
+
+	DDX_Control(pDX, IDC_COMBO_TYPE, m_combox);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -267,6 +272,8 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 		PostQuitMessage(0);
 	}
+
+	m_combox.SetCurSel(0);
 
 	enable_log_file();
 	enable_console_window();
@@ -872,8 +879,13 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 
 	m_edit_status.SetWindowText(_T("测试中..."));
 	m_state = STATE_INIT;
-	m_cali_status.SetWindowText(_T("待定"));
-	m_cali_value.SetWindowText(_T("待定"));
+	m_left_cali_status.SetWindowText(_T("待定"));
+	m_left_cali_value.SetWindowText(_T("待定"));
+
+	m_right_cali_status.SetWindowText(_T("待定"));
+	m_right_cali_value.SetWindowText(_T("待定"));
+
+	::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
 
 	bStopped = FALSE;
 	psensor_check_process();
@@ -900,18 +912,118 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButtonStop()
 	}
 
 	bStopped = TRUE;
-
-	while (bRunning)
-	{
-		Sleep(500);
-	}
 }
 
+
+BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
+{
+	CStatic *pWndStatus;
+	CStatic *pWndData;
+	CString strSide;
+	CString strInfo;
+	BOOL ret = FALSE;
+	CString strEnSide;
+	int sel = m_combox.GetCurSel();
+	const TCHAR *sel_type[] =
+	{
+		_T("tws"),
+		_T("left"),
+		_T("right"),
+	};
+
+	enum 
+	{
+		TYPE_TWS,
+		TYPE_LEFT,
+		TYPE_RIGHT
+	};
+
+	if (sel >= sizeof(sel_type) / sizeof(TCHAR *))
+	{
+		sel = 0;
+		m_combox.SetCurSel(sel);
+	}
+
+	if (pdata->side != LEFT_CHANNEL && pdata->side != RIGHT_CHANNEL)
+	{
+		AfxMessageBox(_T("耳机软件错误!"));
+		return FALSE;
+	}
+
+	Log_d(_T("user select type(%d): %s"), sel, sel_type[sel]);
+
+	if (pdata->side == LEFT_CHANNEL)
+	{
+		pWndStatus = &m_left_cali_status;
+		pWndData = &m_left_cali_value;
+		strSide = _T("左耳");
+		strEnSide = _T("left earphone");
+	}
+	else
+	{
+		pWndStatus = &m_right_cali_status;
+		pWndData = &m_right_cali_value;
+		strSide = _T("右耳");
+		strEnSide = _T("right earphone");
+	}
+
+	if (pdata->cali_flag == PSENSOR_NOT_EXIST)
+	{
+		strInfo.Format(_T("%s 未开机或者未组队"), strSide);
+		pWndStatus->SetWindowText(strInfo);
+	}
+	else if (pdata->cali_flag == PSENSOR_CALI_OK)
+	{
+		strInfo.Format(_T("%s 光感已校准"), strSide);
+		pWndStatus->SetWindowText(strInfo);
+		CString prompt;
+
+		if ((pdata->gray_value < pdata->gray_value) || (pdata->gray_value - pdata->base_value <= 0x100))
+		{
+			prompt.Format(_T("%s 入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准失败！"),strSide, pdata->gray_value , pdata->base_value);
+			Log_d(_T("%s in ear value=0x%04x, out ear value=0x%04x, FAILED."), strEnSide, pdata->gray_value , pdata->base_value);
+			//AfxMessageBox(prompt);
+		}
+		else
+		{
+			prompt.Format(_T("%s入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准成功！"),  strSide, pdata->gray_value , pdata->base_value);
+			Log_d(_T("%s in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), strEnSide, pdata->gray_value , pdata->base_value);
+			ret = TRUE;
+		}
+
+		pWndData->SetWindowText(prompt);
+	}
+	else if (pdata->cali_flag == PSENSOR_NOT_CALI)
+	{
+		strInfo.Format(_T("%s光感未校准"), strSide);
+		pWndStatus->SetWindowText(strInfo);
+	}
+	else
+	{
+		pWndStatus->SetWindowText(_T("耳机数据错误"));
+	}
+
+	if ((sel == TYPE_LEFT && pdata->side == LEFT_CHANNEL) || \
+		(sel == TYPE_RIGHT && pdata->side == RIGHT_CHANNEL) || \
+		(sel == TYPE_TWS))
+	{
+		return ret;
+	}
+	else
+	{
+		return TRUE;
+	}
+}
 
 LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 {
 	m_state = wParam;
-	CString *pInfo = (CString *)lParam;
+	CString *pInfo = NULL;
+
+	if (m_state != STATE_TWS_CALI_DATA)
+	{
+		pInfo = (CString *)lParam;
+	}
 
 	if (m_state == STATE_SUCCESS)
 	{
@@ -941,14 +1053,39 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 	}
 	else if (m_state == STATE_CALI_STATUS)
 	{
-		m_cali_status.SetWindowText(CString(*pInfo));
+		m_left_cali_status.SetWindowText(CString(*pInfo));
 	}
 	else if (m_state == STATE_CALI_VALUE)
 	{
-		m_cali_value.SetWindowText(CString(*pInfo));
+		m_left_cali_value.SetWindowText(CString(*pInfo));
+	}
+	else if (m_state == STATE_TWS_CALI_DATA)
+	{
+		psensor_cali_data_t *pleft;
+		psensor_cali_data_t *pright;
+		BOOL ret;
+
+		pleft = (psensor_cali_data_t *)lParam;
+		ret = UpdatePsensorData(pleft);
+		pright = pleft + 1;
+		ret = UpdatePsensorData(pright) && ret;
+
+		if (ret)
+		{
+			dlg_update_status_ui(STATE_SUCCESS);
+		}
+		else
+		{
+			dlg_update_status_ui(STATE_FAIL);
+		}
+		
 	}
 
-	delete pInfo;
+	if (pInfo)
+	{
+		delete pInfo;
+	}
+
 
 	return 0;
 }
