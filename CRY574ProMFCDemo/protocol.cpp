@@ -607,6 +607,8 @@ UINT thread_process(LPVOID)
 
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
+
+	_CrtSetBreakAlloc(8360); 
 	
 	//retcode = CRYBT_ResetDongle();
 	//Log_d(_T("reset dongle retcode=%d"), retcode);
@@ -629,6 +631,16 @@ UINT thread_process(LPVOID)
 		Log_d(_T("bt device mac: %s"), btdevice);
 		if (!connect_bt_device(btdevice))
 		{
+			if ((retcode = CRYBT_Disconnect()) == API_OK)
+			{
+				info.Format(_T("Disconnected"));
+			} 
+			else
+			{
+				info.Format(_T("error code is %d"),retcode);
+			}
+			dlg_update_ui(info);
+			Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
 			continue;
 		}
 
