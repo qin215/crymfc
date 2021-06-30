@@ -1,7 +1,7 @@
 
 // CRY574ProMFCDemoDlg.cpp : 实现文件
 //
-
+#define _CRTDBG_MAP_ALLOC
 #include "stdafx.h"
 #include "CRY574ProMFCDemo.h"
 #include "CRY574ProMFCDemoDlg.h"
@@ -84,8 +84,6 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_RIGHT_CALI_STATUS, m_right_cali_status);
 	DDX_Control(pDX, IDC_RIGHT_CALI_VALUE, m_right_cali_value);
-
-	DDX_Check(pDX, IDC_CHECK_AUTOTEST, m_auto_test);
 
 	DDX_Text(pDX, IDC_STATIC_TOTAL, m_test_total);
 	DDX_Text(pDX, IDC_STATIC_OK_NUMBER, m_test_ok_nr);
@@ -178,6 +176,8 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
 	}
+
+	AfxInitRichEdit();
 
 	// 设置此对话框的图标。当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
@@ -841,11 +841,11 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 
 LRESULT CCRY574ProMFCDemoDlg::OnUpdatePrompt(WPARAM wParam, LPARAM lParam)
 {
-	CString *pText = (CString *)wParam;
+	TCHAR *pText = (TCHAR *)wParam;
 	BOOL bDelete = (BOOL)lParam;
 
 	CString infoText;
-	infoText = _T("INFO: ") + CString(*pText);
+	infoText = _T("INFO: ") + CString(pText);
 	UpdateInfo(infoText);
 
 	if (bDelete)
@@ -890,7 +890,7 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 	bStopped = FALSE;
 	psensor_check_process();
 	m_test_total++;
-	UpdateData(FALSE);
+
 }
 
 
@@ -1018,11 +1018,12 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 {
 	m_state = wParam;
-	CString *pInfo = NULL;
+	TCHAR *pStr;
+	//CString *pInfo = NULL;
 
 	if (m_state != STATE_TWS_CALI_DATA)
 	{
-		pInfo = (CString *)lParam;
+		pStr = (TCHAR *)lParam;
 	}
 
 	if (m_state == STATE_SUCCESS)
@@ -1053,11 +1054,11 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 	}
 	else if (m_state == STATE_CALI_STATUS)
 	{
-		m_left_cali_status.SetWindowText(CString(*pInfo));
+		m_left_cali_status.SetWindowText(CString(pStr));
 	}
 	else if (m_state == STATE_CALI_VALUE)
 	{
-		m_left_cali_value.SetWindowText(CString(*pInfo));
+		m_left_cali_value.SetWindowText(CString(pStr));
 	}
 	else if (m_state == STATE_TWS_CALI_DATA)
 	{
@@ -1079,11 +1080,6 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 			dlg_update_status_ui(STATE_FAIL);
 		}
 		
-	}
-
-	if (pInfo)
-	{
-		delete pInfo;
 	}
 
 
@@ -1124,8 +1120,9 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 	CDialogEx::OnTimer(nIDEvent);
 	static int count = 0;
 
-	
-	UpdateData(TRUE);
+	CButton* pBtn = (CButton*)GetDlgItem(IDC_CHECK_AUTOTEST);
+	m_auto_test = pBtn->GetCheck();
+
 	if (nIDEvent == AUTOTEST_TIMER_ID)
 	{
 		if (!bRunning)
@@ -1146,7 +1143,7 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 		}
 	}
 
-	UpdateData(FALSE);
+	UpdateData(FALSE);		// 变量值传递到控件
 
 	if (bRunning)
 	{

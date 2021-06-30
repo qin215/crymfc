@@ -1,3 +1,4 @@
+#define _CRTDBG_MAP_ALLOC
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -607,9 +608,18 @@ UINT thread_process(LPVOID)
 
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
+#if 0
+	_CrtSetBreakAlloc(5881); 
+	_CrtSetBreakAlloc(5882); 
+	_CrtSetBreakAlloc(5883); 
 
-	_CrtSetBreakAlloc(8360); 
-	
+	_CrtSetBreakAlloc(5884);
+	_CrtSetBreakAlloc(5885);
+	_CrtSetBreakAlloc(5886);
+	_CrtSetBreakAlloc(5887);
+	_CrtSetBreakAlloc(5888);
+	_CrtSetBreakAlloc(5889);
+#endif	
 	//retcode = CRYBT_ResetDongle();
 	//Log_d(_T("reset dongle retcode=%d"), retcode);
 
@@ -746,16 +756,18 @@ INT32 psensor_check_process()
  */
 void dlg_update_ui(const CString& promptinfo)
 {
-	CString *pInfoText = new CString(promptinfo);
+	//CString *pInfoText = new CString(promptinfo);
+	static TCHAR strBuff[128];
 
+	lstrcpy(strBuff, promptinfo);
 	CCRY574ProMFCDemoDlg * pDlg = (CCRY574ProMFCDemoDlg *)AfxGetMainWnd();
 	if (pDlg)
 	{
-		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATIC, (WPARAM)pInfoText, TRUE);
+		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATIC, (WPARAM)strBuff, FALSE);
 	}
 	else
 	{
-		delete pInfoText;
+
 	}
 }
 
@@ -765,15 +777,19 @@ void dlg_update_ui(const CString& promptinfo)
 void dlg_update_status_ui(INT state, const CString& info)
 {
 	CCRY574ProMFCDemoDlg * pDlg = (CCRY574ProMFCDemoDlg *)AfxGetMainWnd();
+	static TCHAR strBuff[128];
+
 	if (pDlg)
 	{
+#if 0
 		CString *pInfoText = new CString(info);
 		if (pInfoText == NULL)
 		{
 			ASSERT(FALSE);
 		}
-
-		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATUS, (WPARAM)state, (LPARAM)pInfoText);
+#endif
+		lstrcpy(strBuff, info);
+		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATUS, (WPARAM)state, (LPARAM)strBuff);
 	}
 }
 
