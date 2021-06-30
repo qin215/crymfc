@@ -200,7 +200,7 @@ CString begin_inquiry_bt_device()
 
 	for (int i = 0 ;i < nInqCount; i++)
 	{
-		char* pcMac = new char[256];
+		char* pcMac = DBG_NEW char[256];
 		int nRssi = 0;
 		CRYBT_GetInquiryMac(i, pcMac);
 		CRYBT_GetInquiryRssi(i, nRssi);
@@ -233,7 +233,7 @@ BOOL connect_bt_device(const CString& device)
 {
 	// TODO: 在此添加控件通知处理程序代码
 	BOOL ret = FALSE;
-	char* pcMac = new char[64];
+	char* pcMac = DBG_NEW char[64];
 	int len = device.GetLength();
 	CString info;
 	info.Format(_T("正在连接蓝牙:%s"), device);
@@ -267,7 +267,7 @@ BOOL connect_bt_device(const CString& device)
 BOOL check_bt_name()
 {
 	int retCode;
-	char* pcName = new char[256];
+	char* pcName = DBG_NEW char[256];
 	CString strinfo;
 	BOOL ret = FALSE;
 
@@ -298,7 +298,7 @@ BOOL check_bt_name()
 
 BOOL connect_bt_spp(const CString& device)
 {
-	char* pcMac = new char[64];
+	char* pcMac = DBG_NEW char[64];
 	int len = device.GetLength();
 	CString info;
 	BOOL ret = FALSE;
@@ -337,7 +337,7 @@ BOOL check_psensor_calibrated()
 	BOOL ret = FALSE;
 	INT retcode;
 
-	char* pcRecv = new char[4096];
+	char* pcRecv = DBG_NEW char[4096];
 	retcode = CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
 	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	CString strSPPRecv(pcRecv);
@@ -376,7 +376,7 @@ void check_psensor_cali_value()
 	const char far_hi_data[] = "05 5A 05 00 06 0E 00 0B 1D";
 	const char far_low_data[] = "05 5A 05 00 06 0E 00 0B 1E";
 
-	char* pcRecv = new char[4096];
+	char* pcRecv = DBG_NEW char[4096];
 	INT retcode;
 
 	// 入耳数据
@@ -449,7 +449,7 @@ BOOL check_psensor_calibrated_2()
 	const char tws_cali_data_cmd[] = "05 5A 05 00 00 20 00 0B 30";
 	BOOL ret = FALSE;
 
-	char* pcRecv = new char[4096];
+	char* pcRecv = DBG_NEW char[4096];
 	INT retcode;
 
 	// 入耳数据
@@ -471,7 +471,7 @@ BOOL check_psensor_calibrated_2()
 	}
 
 	/* 数据传递给主线程 */
-	UCHAR *data_ptr = new UCHAR[2 * sizeof(psensor_cali_data_t)];
+	UCHAR *data_ptr = DBG_NEW UCHAR[2 * sizeof(psensor_cali_data_t)];
 
 	if (!data_ptr)
 	{
@@ -494,7 +494,7 @@ done:
 UINT32 parse_spp_rsp_data(CString& strRSP)
 {
 	int nlen = strRSP.GetLength();
-	UCHAR *pbuff = new UCHAR[nlen];
+	UCHAR *pbuff = DBG_NEW UCHAR[nlen];
 	UINT32 ret;
 
 	if (!pbuff)
@@ -529,7 +529,7 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 							psensor_cali_data_t *right_earphone)
 {
 	int nlen = strRSP.GetLength();
-	UCHAR *pbuff = new UCHAR[nlen];
+	UCHAR *pbuff = DBG_NEW UCHAR[nlen];
 	BOOL ret = FALSE;
 
 	if (!pbuff)
@@ -608,18 +608,7 @@ UINT thread_process(LPVOID)
 
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
-#if 0
-	_CrtSetBreakAlloc(5881); 
-	_CrtSetBreakAlloc(5882); 
-	_CrtSetBreakAlloc(5883); 
 
-	_CrtSetBreakAlloc(5884);
-	_CrtSetBreakAlloc(5885);
-	_CrtSetBreakAlloc(5886);
-	_CrtSetBreakAlloc(5887);
-	_CrtSetBreakAlloc(5888);
-	_CrtSetBreakAlloc(5889);
-#endif	
 	//retcode = CRYBT_ResetDongle();
 	//Log_d(_T("reset dongle retcode=%d"), retcode);
 
@@ -756,7 +745,7 @@ INT32 psensor_check_process()
  */
 void dlg_update_ui(const CString& promptinfo)
 {
-	//CString *pInfoText = new CString(promptinfo);
+	//CString *pInfoText = DBG_NEW CString(promptinfo);
 	static TCHAR strBuff[128];
 
 	lstrcpy(strBuff, promptinfo);
@@ -782,7 +771,7 @@ void dlg_update_status_ui(INT state, const CString& info)
 	if (pDlg)
 	{
 #if 0
-		CString *pInfoText = new CString(info);
+		CString *pInfoText = DBG_NEW CString(info);
 		if (pInfoText == NULL)
 		{
 			ASSERT(FALSE);

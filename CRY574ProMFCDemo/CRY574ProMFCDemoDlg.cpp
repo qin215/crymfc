@@ -1065,6 +1065,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		psensor_cali_data_t *pleft;
 		psensor_cali_data_t *pright;
 		BOOL ret;
+		void *ptr = (UCHAR *)lParam;
 
 		pleft = (psensor_cali_data_t *)lParam;
 		ret = UpdatePsensorData(pleft);
@@ -1079,9 +1080,9 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		{
 			dlg_update_status_ui(STATE_FAIL);
 		}
-		
-	}
 
+		delete ptr;
+	}
 
 	return 0;
 }
