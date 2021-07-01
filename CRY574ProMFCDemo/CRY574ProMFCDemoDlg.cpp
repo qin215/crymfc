@@ -377,9 +377,31 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButtonIni()
 		UpdateInfo(_T("Initialize successed"));
 	}
 }
+
+#define MAX_EDIT_SHOW_CHARS		(20 * 1024)
 void CCRY574ProMFCDemoDlg::UpdateInfo(CString strInfo)
 {
-	//int nLen = m_editShow.SendMessage(WM_GETTEXTLENGTH);
+	int nLen = m_editShow.SendMessage(WM_GETTEXTLENGTH);
+
+	if (nLen >= MAX_EDIT_SHOW_CHARS)		//	É¾³ýÒ»°ëµÄ×Ö·û
+	{
+		CString fullText;
+		CString rightText;
+		CString rightNewLineText;
+
+		m_editShow.GetWindowText(fullText);
+
+		rightText = fullText.Right(nLen / 2);
+
+		int pos = rightText.Find(_T("\r\n"));
+		int rightLen = rightText.GetLength();
+
+		rightNewLineText = rightText.Mid(pos + 2);
+
+		m_editShow.SetSel(0, nLen);
+		m_editShow.ReplaceSel(rightNewLineText);
+	}
+
 	m_editShow.SetSel(-1, -1); 
 	strInfo += _T("\r\n");
 	m_editShow.ReplaceSel(strInfo);
@@ -950,7 +972,7 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 		return FALSE;
 	}
 
-	Log_d(_T("user select type(%d): %s"), sel, sel_type[sel]);
+	Log_d(_T("user select type(%d): %s, total=%d, ok_count=%d"), sel, sel_type[sel], m_test_total, m_test_ok_nr);
 
 	if (pdata->side == LEFT_CHANNEL)
 	{

@@ -448,6 +448,7 @@ BOOL check_psensor_calibrated_2()
 {
 	const char tws_cali_data_cmd[] = "05 5A 05 00 00 20 00 0B 30";
 	BOOL ret = FALSE;
+	int i;
 
 	char* pcRecv = DBG_NEW char[4096];
 	INT retcode;
@@ -460,21 +461,34 @@ BOOL check_psensor_calibrated_2()
 	psensor_cali_data_t left;
 	psensor_cali_data_t right;
 
-	ret = parse_spp_rsp_data_2(strSPPRecv, &left, &right);
-	strInfo.Format(_T("SPP TWS Recv:%s"),strSPPRecv);
-	dlg_update_ui(strInfo);
-	if (!ret)
+	for (i = 0; i < 3; i++)		// 重试3次
 	{
-		strInfo.Format(_T("spp TWS CMD error, please check sw version > V2.9"));
+		ret = parse_spp_rsp_data_2(strSPPRecv, &left, &right);
+		strInfo.Format(_T("SPP TWS Recv:%s"),strSPPRecv);
 		dlg_update_ui(strInfo);
-		goto done;
+		if (!ret)
+		{
+			strInfo.Format(_T("spp TWS CMD error, please check sw version > V2.9"));
+			Log_e(_T("retry count=%d, spp TWS CMD error, please check sw version, recv rsp='%s'"), i, strSPPRecv);
+			dlg_update_ui(strInfo);
+		}
+		else
+		{
+			break;
+		}
 	}
 
+	if (i == 3)
+	{
+		goto done;
+	}
+	
 	/* 数据传递给主线程 */
 	UCHAR *data_ptr = DBG_NEW UCHAR[2 * sizeof(psensor_cali_data_t)];
 
 	if (!data_ptr)
 	{
+		Log_e(_T("no memory!"));
 		ASSERT(FALSE);
 	}
 
@@ -529,23 +543,34 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 							psensor_cali_data_t *right_earphone)
 {
 	int nlen = strRSP.GetLength();
-	UCHAR *pbuff = DBG_NEW UCHAR[nlen];
+	UCHAR *pbuff;
 	BOOL ret = FALSE;
 
+	Log_d(_T("qin spp orgin rsp str ='%s'"), strRSP);
+	if (nlen == 0)
+	{
+		return FALSE;
+	}
+
+	pbuff = DBG_NEW UCHAR[nlen];
 	if (!pbuff)
 	{
 		bStopped = TRUE;
+		Log_e(_T("qin no memory!"));
 		AfxMessageBox(_T("没有内存"));
-		PostQuitMessage(0);
+		PostQuitMessage(0);			// 退出
 	}
 
 	int binlen = String2HexData(strRSP, pbuff);
-
 	if (binlen <= 0)
 	{
 		bStopped = TRUE;
-		AfxMessageBox(_T("返回值错误"));
-		PostQuitMessage(0);
+		Log_e(_T("qin data format error!raw data=%s"), strRSP);
+		//AfxMessageBox(_T("返回值错误"));
+		//delete pbuff;
+		//PostQuitMessage(0);
+
+		goto done;				// 返回值错误，进行重发
 	}
 
 	onewire_frame_t *pFrame = (onewire_frame_t *)pbuff;
@@ -562,12 +587,13 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 	if (!valid)
 	{
 		printf("qin spp format error!");
+		Log_e(_T("qin spp format error, raw data=%s"), strRSP);
 		goto done;
 	}
 	
 	if (pFrame->param[0] == 0)
 	{
-		Log_e(_T("qin spp rsp error, earphone sw not support!"));
+		Log_e(_T("qin spp rsp error, earphone sw not support!, raw data=%s"), strRSP);
 		goto done;
 	}
 
@@ -579,13 +605,12 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 	*right_earphone = *((struct psensor_cali_struct *)ptr);
 	ret = TRUE;
 
-
 done:
 	delete pbuff;
 
 	// 删除多余的0
 	strRSP = strRSP.Left(3 * len);
-	Log_d(_T("recv spp data='%s'"), strRSP);
+	Log_d(_T("process recv spp data='%s'"), strRSP);
 
 	return ret;
 }
@@ -666,6 +691,7 @@ UINT thread_process(LPVOID)
 
 	if (!connect_bt_spp(btdevice))
 	{
+		Log_e(_T("connect device(%s) failed!"), btdevice);
 		dlg_update_status_ui(STATE_ABORT);
 		goto disconn_bt;
 	}
