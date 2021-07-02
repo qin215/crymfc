@@ -19,7 +19,8 @@ extern "C" {
 		STATE_DONE,
 		STATE_CALI_STATUS,
 		STATE_CALI_VALUE,
-		STATE_TWS_CALI_DATA
+		STATE_TWS_CALI_DATA,
+		STATE_TWS_MODE_DATA
 	};
 
 	enum 
@@ -132,9 +133,32 @@ extern "C" {
 #define RACE_CMD_GET_PARTNER_ID 0X0D00
 #define RACE_CMD_RELAY_PARTER_CMD	0x0D01
 
+/*
+ * return true use customer ui, otherwise use system ui.
+ */
+#define CUSTOMER_UI_INDEX 					0
+#define CUSTOMER_PRODUCT_INDEX			1
+#define CUSTOMER_PSENSOR_SIM_INDEX 		2			// 开发板模拟出入耳
+#define CUSTOMER_SPP_LOG_INDEX			3
+#define CUSTOM_CONF_NUM					(CUSTOMER_SPP_LOG_INDEX + 1)
+
+enum 
+{
+	TWS_USER_MODE = 0,		// 用户模式
+	TWS_PRODUCT_MODE,		// 产测模式
+	TWS_ERROR_MODE
+};
 
 
+typedef struct tws_mode_struct
+{
+	UCHAR tws_side;
+	UCHAR tws_mode;
+} tws_mode_t;
 
+extern CWinThread *pWorkThread;
+extern BOOL bStopped;
+extern BOOL bRunning;
 
 UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len);
 
@@ -142,7 +166,7 @@ void dlg_update_ui(const CString& promptinfo);
 
 INT32 psensor_check_process();
 
-UINT32 parse_spp_rsp_data(CString& strRSP);
+UINT32 parse_spp_rsp_data(CString& strRSP, int *pside);
 
 int Char2Int(TCHAR c);
 
@@ -161,9 +185,10 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 
 void dlg_update_status_data(INT state, void *data_ptr);
 
-extern CWinThread *pWorkThread;
-extern BOOL bStopped;
-extern BOOL bRunning;
+const TCHAR * get_tws_side_str(int side);
+
+void check_tws_mode();
+
 
 #ifdef __cplusplus
 }

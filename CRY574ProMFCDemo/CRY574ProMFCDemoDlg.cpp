@@ -88,6 +88,7 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_STATIC_OK_NUMBER, m_test_ok_nr);
 
 	DDX_Control(pDX, IDC_COMBO_TYPE, m_combox);
+	DDX_Control(pDX, IDC_STATIC_MODE, m_tws_mode);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -281,6 +282,9 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	int retcode;
 	retcode = CRYBT_ResetDongle();
 	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
+
+	m_test_bitmap = (1 << TEST_PSENSOR_INDEX) | (1 << TEST_USER_MODE_INDEX);
+	memset(&m_test_array[0], 0, sizeof(m_test_array));
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -784,13 +788,14 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton2()
 	UpdateData(TRUE);
 
 	const char data[] = "05 5A 05 00 06 0E 00 0B 17";
+	int side;
 
 
 	char* pcRecv = new char[4096];
 	CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
 	CString strSPPRecv(pcRecv);
 
-	BOOL ok = parse_spp_rsp_data(strSPPRecv);
+	BOOL ok = parse_spp_rsp_data(strSPPRecv, &side);
 	if (ok)
 	{
 		AfxMessageBox(_T("光感已校准"));
@@ -819,6 +824,8 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 	const char far_hi_data[] = "05 5A 05 00 06 0E 00 0B 1D";
 	const char far_low_data[] = "05 5A 05 00 06 0E 00 0B 1E";
 
+	int side;
+
 	char* pcRecv = new char[4096];
 	CRYBT_SPPCommand(near_hi_data, pcRecv, 1000, TRUE);
 	CString strSPPRecv(pcRecv);
@@ -826,7 +833,7 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 	strInfo.Format(_T("SPP NEAR HIGH8 Recv:%s"),strSPPRecv);
 	UpdateInfo(strInfo);
 
-	UINT32 near_data = parse_spp_rsp_data(strSPPRecv);
+	UINT32 near_data = parse_spp_rsp_data(strSPPRecv, &side);
 	
 
 	CRYBT_SPPCommand(near_low_data, pcRecv, 1000, TRUE);
@@ -835,7 +842,7 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 	UpdateInfo(strInfo);
 
 	near_data <<= 8;
-	near_data |= parse_spp_rsp_data(strSPPRecv);
+	near_data |= parse_spp_rsp_data(strSPPRecv, &side);
 
 	UINT32 far_data = CRYBT_SPPCommand(far_hi_data, pcRecv, 1000, TRUE);
 	strSPPRecv = CString(pcRecv);
@@ -848,7 +855,7 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton3()
 	strSPPRecv = CString(pcRecv);
 	strInfo.Format(_T("SPP far low8 Recv:%s"),strSPPRecv);
 	UpdateInfo(strInfo);
-	far_data |= parse_spp_rsp_data(strSPPRecv);
+	far_data |= parse_spp_rsp_data(strSPPRecv, &side);
 
 	CString prompt;
 	prompt.Format(_T("入耳校准值为:0X%04X, 出耳校准值为：0x%04X"), near_data, far_data);
@@ -1036,6 +1043,209 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 	}
 }
 
+
+BOOL CCRY574ProMFCDemoDlg::UpdateTwsModeData(tws_mode_t *agent, tws_mode_t *partner)
+{
+	CStatic *pWndStatus = &m_tws_mode;
+	CString strSide;
+	CString strInfo;
+	BOOL ret = FALSE;
+	CString strEnSide;
+	int sel = m_combox.GetCurSel();
+	const TCHAR *sel_type[] =
+	{
+		_T("tws"),
+		_T("left"),
+		_T("right"),
+	};
+
+	enum 
+	{
+		TYPE_TWS,
+		TYPE_LEFT,
+		TYPE_RIGHT
+	};
+
+	if (sel >= sizeof(sel_type) / sizeof(TCHAR *))
+	{
+		sel = 0;
+		m_combox.SetCurSel(sel);
+	}
+
+	if (agent->tws_mode == TWS_ERROR_MODE && partner->tws_mode == TWS_ERROR_MODE)
+	{
+		strInfo.Format(_T("左右耳未开机或者软件错误"));
+		pWndStatus->SetWindowText(strInfo);
+
+		return FALSE;
+	}
+
+	Log_d(_T("user select type(%d): %s, total=%d, ok_count=%d"), sel, sel_type[sel], m_test_total, m_test_ok_nr);
+
+	enum 
+	{
+		ERROR_OK,			// NO error;
+		ERROR_BOTH_LEFT,
+		ERROR_BOTH_RIGHT,
+		ERROR_NOT_GET_LEFT,
+		ERROR_NOT_GET_RIGHT
+	};
+
+	int error_code = ERROR_OK;
+	CString firstPrompt;
+	CString secondPrompt;
+	CString errorPrompt;
+	tws_mode_t *pleft = NULL;
+	tws_mode_t *pright = NULL;
+
+	if (agent->tws_mode == TWS_PRODUCT_MODE || agent->tws_mode == TWS_USER_MODE)
+	{
+		if (agent->tws_side == LEFT_CHANNEL)
+		{
+			pleft = agent;
+		}
+		else if (agent->tws_side == RIGHT_CHANNEL)
+		{
+			pright = agent;
+		}
+		else
+		{
+			Log_e(_T("agent data error: tws_mode=%d, channel=%d"), agent->tws_mode, agent->tws_side);
+		}
+	}
+	
+	if (partner->tws_mode == TWS_PRODUCT_MODE || partner->tws_mode == TWS_USER_MODE)
+	{
+		if (partner->tws_side == LEFT_CHANNEL)
+		{
+			if (pleft)
+			{
+				error_code = ERROR_BOTH_LEFT;
+				errorPrompt = _T("重复左声道");
+			}
+
+			pleft = partner;
+		}
+		else if (partner->tws_side == RIGHT_CHANNEL)
+		{
+			if (pright)
+			{
+				error_code = ERROR_BOTH_RIGHT;
+				errorPrompt = _T("重复右声道");
+			}
+
+			pright = partner;
+		}
+		else
+		{
+			Log_e(_T("partner data error: tws_mode=%d, channel=%d"), partner->tws_mode, partner->tws_side);
+		}
+
+		secondPrompt = strSide + strInfo;
+	}
+
+	if (pleft)
+	{
+		if (pleft->tws_mode == TWS_PRODUCT_MODE)
+		{
+			strInfo.Format(_T("产测模式"));
+		}
+		else
+		{
+			strInfo.Format(_T("用户模式"));
+		}
+
+		if (!pright)
+		{
+			if (errorPrompt.IsEmpty())
+			{
+				errorPrompt = _T("右耳未开机");
+			}
+		}
+
+		firstPrompt = _T("左耳:") + strInfo + _T(",");
+	}
+
+	if (pright)
+	{
+		if (pright->tws_mode == TWS_PRODUCT_MODE)
+		{
+			strInfo.Format(_T("产测模式"));
+		}
+		else
+		{
+			strInfo.Format(_T("用户模式"));
+		}
+
+		if (!pleft)
+		{
+			if (errorPrompt.IsEmpty())
+			{
+				errorPrompt = _T("左耳未开机");
+			}
+		}
+
+		secondPrompt = _T("右耳:") + strInfo + _T(",");
+	}
+
+
+	pWndStatus->SetWindowText(firstPrompt + secondPrompt + errorPrompt);
+
+
+	if ((sel == TYPE_LEFT))
+	{
+		if (!pleft)
+		{
+			return FALSE;
+		}
+
+		if (pleft->tws_mode == TWS_USER_MODE)
+		{
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+		
+	if (sel == TYPE_RIGHT)
+	{
+		if (!pright)
+		{
+			return FALSE;
+		}
+
+		if (pright->tws_mode == TWS_USER_MODE)
+		{
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+
+	if (sel == TYPE_TWS)
+	{
+		if (!pright || !pleft)
+		{
+			return FALSE;
+		}
+
+		if ((pleft->tws_mode == TWS_USER_MODE) && (pright->tws_mode == TWS_USER_MODE))
+		{
+			return TRUE;
+		}
+
+
+
+		return FALSE;
+	}
+	
+	return FALSE;
+}
+
 LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 {
 	m_state = wParam;
@@ -1092,6 +1302,40 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		ret = UpdatePsensorData(pleft);
 		pright = pleft + 1;
 		ret = UpdatePsensorData(pright) && ret;
+
+		m_test_array[TEST_PSENSOR_INDEX] = ret;
+#if 0
+		if (ret)
+		{
+			dlg_update_status_ui(STATE_SUCCESS);
+		}
+		else
+		{
+			dlg_update_status_ui(STATE_FAIL);
+		}
+#endif
+		delete ptr;
+	}
+	else if (m_state == STATE_TWS_MODE_DATA)
+	{
+		tws_mode_t *agent;
+		tws_mode_t *partner;
+		BOOL ret;
+		void *ptr = (UCHAR *)lParam;
+
+		agent = (tws_mode_t *)lParam;
+		partner = agent + 1;
+		ret = UpdateTwsModeData(agent, partner);
+		m_test_array[TEST_USER_MODE_INDEX] = ret;
+
+		ret = TRUE;
+		for (int i = 0; i < TEST_NR; i++)		// 放到最后一个测试项目
+		{
+			if (m_test_bitmap & (1 << i))
+			{
+				ret = ret & m_test_array[i];
+			}
+		}
 
 		if (ret)
 		{

@@ -54,6 +54,7 @@ private:
 	LRESULT OnUpdateStatus(WPARAM wParam, LPARAM lParam);
 
 	BOOL UpdatePsensorData(psensor_cali_struct *pdata);
+	BOOL UpdateTwsModeData(tws_mode_t *agent, tws_mode_t *partner);
 
 	CButton m_button_start;
 	CEdit  m_edit_status;
@@ -72,6 +73,8 @@ private:
 	CStatic m_right_cali_status;
 	CStatic m_right_cali_value;
 
+	CStatic m_tws_mode;
+
 	CComboBox m_combox;
 
 	BOOL m_auto_test;
@@ -79,6 +82,15 @@ private:
 	INT m_test_total;
 	INT m_test_ok_nr;
 
+	enum 
+	{
+		TEST_PSENSOR_INDEX = 0,
+		TEST_USER_MODE_INDEX,
+		TEST_NR
+	};
+
+	int m_test_array[TEST_NR];
+	int m_test_bitmap;
 
 public:
 	afx_msg void OnBnClickedButtonInquiry1();

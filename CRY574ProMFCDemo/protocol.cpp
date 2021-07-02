@@ -1,4 +1,3 @@
-#define _CRTDBG_MAP_ALLOC
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -30,139 +29,13 @@ BOOL bRunning = FALSE;
 CWinThread *pWorkThread;
 CString current_bt_device;
 
-BOOL check_partner_user_mode();
-BOOL check_agent_user_mode();
+tws_mode_t get_agent_mode();
+tws_mode_t get_partner_mode();
 onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *pindex);
 
-int Char2Int(TCHAR c)
-{
-	switch(c)
-	{
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-		return c-'0';
-		break;
+#define SPP_RSP_ERROR	0xFFFFFFFF
 
-	case 'a':
-	case 'b':
-	case 'c':
-	case 'd':
-	case 'e':
-	case 'f':
-		return c-'a'+10;
-		break;
-	case 'A':
-	case 'B':
-	case 'C':
-	case 'D':
-	case 'E':
-	case 'F':
-		return c-'A'+10;
-		break;
-	default:
-		return 0xFFFFFFFF;
-
-	}
-
-}
-
-BYTE Hex2Char(BYTE data)
-{
-	BYTE hex= data&0x0f;
-
-	if(hex>=0x00 && hex<=0x09)
-		hex += '0';
-	else if(hex>=0x0a && hex<=0x0f)
-		hex += ('A'-0x0a);
-
-	return hex;
-}
-
-BYTE Char2Hex(BYTE hex) 
-{
-	if (hex>='a' && hex<='f')
-	{
-		hex -= 0x20;
-	}
-
-	if ((hex>='0' && hex<='9') || (hex>='A' && hex<='F'))
-	{
-		if(hex>='0' && hex<='9')
-			hex -= '0';
-		if(hex>='A' && hex<='F')
-			hex -= ('A' - 0x0A);
-		return hex;
-	}
-
-	return 0;
-}
-
-int String2HexData(const CString &in_str, UCHAR * outBuffer)
-{
-	int iLen, i;
-	int count;
-	TCHAR * p;
-
-	CString str = in_str;
-
-	iLen = str.GetLength();
-
-	str.Replace(_T(" "), _T(""));
-
-	p = str.GetBuffer(iLen);
-	for(i = 0, count = 0; i < iLen / 2; i++, count++)
-	{
-		int temp;
-
-		*outBuffer = 0;
-		temp = Char2Int(*p);
-		if( temp == 0xFFFFFFFF )
-			return count;
-		*outBuffer = temp;
-		p++;
-		*outBuffer <<= 4;
-		temp = Char2Int(*p);
-		if( temp == 0xFFFFFFFF )
-			return count;
-		*outBuffer |= temp;
-		p++;
-		*outBuffer++;
-	}
-
-	return count;
-}
-
-/*
- * 二进制数据转为hex数据
- */
-int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_len)
-{
-	int i;
-	int index;
-
-	if (out_len < len * 3)
-	{
-		return -1;
-	}
-
-	for (i = 0, index = 0; i < len; i++)
-	{
-		index += sprintf_s((char *)&outBuff[index], out_len - index, "%02X ", inBuff[i]);
-	}
-
-	return index;
-}
-
-
-UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len)
+UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len, int *pside)
 {
 	onewire_frame_t *pFrame = (onewire_frame_t *)pdata;
 	BOOL valid = FALSE;
@@ -178,8 +51,10 @@ UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len)
 	if (!valid)
 	{
 		Log_e(_T("qin spp format error!"));
-		return 0;
+		return SPP_RSP_ERROR;
 	}
+
+	*pside = pFrame->side;
 
 	return pFrame->param[0];
 }
@@ -338,13 +213,14 @@ BOOL check_psensor_calibrated()
 	const char data[] = "05 5A 05 00 06 0E 00 0B 17";
 	BOOL ret = FALSE;
 	INT retcode;
+	int side = 0;
 
 	char* pcRecv = DBG_NEW char[4096];
 	retcode = CRYBT_SPPCommand(data, pcRecv, 1000, TRUE);
 	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	CString strSPPRecv(pcRecv);
 
-	BOOL ok = parse_spp_rsp_data(strSPPRecv);
+	BOOL ok = parse_spp_rsp_data(strSPPRecv, &side);
 	if (ok)
 	{
 		//AfxMessageBox(_T("光感已校准"));
@@ -380,6 +256,8 @@ void check_psensor_cali_value()
 
 	char* pcRecv = DBG_NEW char[4096];
 	INT retcode;
+	int side = 0;
+
 
 	// 入耳数据
 	retcode = CRYBT_SPPCommand(near_hi_data, pcRecv, 1000, TRUE);
@@ -387,7 +265,7 @@ void check_psensor_cali_value()
 	CString strSPPRecv(pcRecv);
 	CString strInfo;
 
-	UINT32 near_data = parse_spp_rsp_data(strSPPRecv);
+	UINT32 near_data = parse_spp_rsp_data(strSPPRecv, &side);
 	strInfo.Format(_T("SPP NEAR HIGH8 Recv:%s"),strSPPRecv);
 	dlg_update_ui(strInfo);
 	near_data <<= 8;
@@ -396,7 +274,7 @@ void check_psensor_cali_value()
 	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
 
-	near_data |= parse_spp_rsp_data(strSPPRecv);
+	near_data |= parse_spp_rsp_data(strSPPRecv, &side);
 	strInfo.Format(_T("SPP NEAR LOW8 Recv:%s"),strSPPRecv);
 	dlg_update_ui(strInfo);
 	// 入耳数据 结束
@@ -407,7 +285,7 @@ void check_psensor_cali_value()
 	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
 
-	far_data = parse_spp_rsp_data(strSPPRecv);
+	far_data = parse_spp_rsp_data(strSPPRecv, &side);
 	strInfo.Format(_T("SPP far high8 Recv:%s"),strSPPRecv);
 	dlg_update_ui(strInfo);
 
@@ -416,7 +294,7 @@ void check_psensor_cali_value()
 	retcode = CRYBT_SPPCommand(far_low_data, pcRecv, 1000, TRUE);
 	Log_d(_T("send spp cmd retcode=%d"), retcode);
 	strSPPRecv = CString(pcRecv);
-	far_data |= parse_spp_rsp_data(strSPPRecv);
+	far_data |= parse_spp_rsp_data(strSPPRecv, &side);
 	strInfo.Format(_T("SPP far low8 Recv:%s"),strSPPRecv);
 	dlg_update_ui(strInfo);
 	
@@ -507,7 +385,7 @@ done:
 }
 
 
-UINT32 parse_spp_rsp_data(CString& strRSP)
+UINT32 parse_spp_rsp_data(CString& strRSP, int *pside)
 {
 	int nlen = strRSP.GetLength();
 	UCHAR *pbuff;
@@ -516,7 +394,7 @@ UINT32 parse_spp_rsp_data(CString& strRSP)
 	if (nlen == 0)
 	{
 		Log_e(_T("qin nlen == 0!"));
-		return 0;
+		return SPP_RSP_ERROR;
 	}
 
 	pbuff = DBG_NEW UCHAR[nlen];
@@ -534,7 +412,7 @@ UINT32 parse_spp_rsp_data(CString& strRSP)
 		goto done;
 	}
 
-	ret = parse_race_cmd_rsp(pbuff, binlen);
+	ret = parse_race_cmd_rsp(pbuff, binlen, pside);
 
 done:
 	delete pbuff;
@@ -716,8 +594,7 @@ UINT thread_process(LPVOID)
 	{
 	}
 
-	check_agent_user_mode();
-	check_partner_user_mode();
+	check_tws_mode();
 
 	ret = 0;
 
@@ -842,16 +719,18 @@ void dlg_update_status_data(INT state, void *data_ptr)
 
 
 // 判断agent是否为用户模式
-BOOL check_agent_user_mode()
+tws_mode_t get_agent_mode()
 {
 	const char customer_ui_data[] = "05 5A 05 00 00 20 00 0B 12";		// 检查customer ui
-	const char product_mode_data[] = "05 5A 05 00 00 20 00 0B 13";		// 检查pfoduct mode
 	char* pcRecv = DBG_NEW char[4096];
 	INT retcode;
-	BOOL bCustomerUi;
-	BOOL bProductMode;
+	UINT32 bCustomerUi;
+	UINT32 bProductMode;
 	BOOL ret = FALSE;
 	int i;
+	int side = 0;
+	tws_mode_t mode;
+	UINT32 sppret;
 
 	for (i = 0; i < 3; i++)
 	{
@@ -860,31 +739,40 @@ BOOL check_agent_user_mode()
 		CString strSPPRecv(pcRecv);
 		CString strInfo;
 
-		bCustomerUi = parse_spp_rsp_data(strSPPRecv);
+		sppret = parse_spp_rsp_data(strSPPRecv, &side);
 		strInfo.Format(_T("check customer ui Recv: %s"),strSPPRecv);
 		dlg_update_ui(strInfo);
 
-		retcode = CRYBT_SPPCommand(product_mode_data, pcRecv, 1000, TRUE);
-		Log_d(_T("send spp cmd retcode=%d"), retcode);
-		strSPPRecv = CString(pcRecv);
+		bCustomerUi = (sppret >> CUSTOMER_UI_INDEX) & 0x1;
+		bProductMode = (sppret >> CUSTOMER_PRODUCT_INDEX) & 0x1;
 
-		bProductMode = parse_spp_rsp_data(strSPPRecv);
-		strInfo.Format(_T("check product mode Recv:%s"), strSPPRecv);
-		dlg_update_ui(strInfo);
-
+		Log_d(_T("agent customer ui(%d), product mode(%d), side(%d)=%s"), bCustomerUi, bProductMode, side, get_tws_side_str(side));
 		ret = (bCustomerUi == TRUE) && (bProductMode == FALSE);
-		Log_d(_T("agent customer ui(%d), product mode(%d)"), bCustomerUi, bProductMode);
 		if (ret)
 		{
 			break;
 		}
 	}
 
+	mode.tws_side = side & 0xff;
+	if ((bCustomerUi == TRUE) && (bProductMode == FALSE))
+	{
+		mode.tws_mode = TWS_USER_MODE;
+	}
+	else if ((bCustomerUi == FALSE) && (bProductMode == TRUE))
+	{
+		mode.tws_mode = TWS_PRODUCT_MODE;
+	}
+	else
+	{
+		mode.tws_mode = TWS_ERROR_MODE;
+	}
+
 	//
 	delete pcRecv;
 	pcRecv = NULL;
 
-	return ret;
+	return mode;
 }
 
 
@@ -965,8 +853,6 @@ done:
 
 	return ret;
 }
-
-
 
 // 构建从耳race cmd 转发包
 UCHAR * cons_relay_race_cmd(UCHAR id, LPCCH cmd_str)
@@ -1120,14 +1006,14 @@ done:
 	return ret;
 }
 
-BOOL send_partner_relay_cmd(const char *partner_cmd)
+UINT32 send_partner_relay_cmd(const char *partner_cmd, int *pside)
 {
 	const char partner_id_cmd[] = "05 5A 02 00 00 0D";		// 获取partner id
 	char* pcRecv = DBG_NEW char[4096];
 	int i;
 	int retcode;
 	BYTE id;
-	BOOL ret = FALSE;
+	UINT32 ret = SPP_RSP_ERROR;
 	BYTE *pPartner = NULL;
 	int len;
 
@@ -1183,7 +1069,7 @@ BOOL send_partner_relay_cmd(const char *partner_cmd)
 	// 解析partner数据
 	Log_d(_T("get partner data len=%d"), len);
 	print_buffer_data(pPartner, len);
-	ret = parse_race_cmd_rsp(pPartner, len);
+	ret = parse_race_cmd_rsp(pPartner, len, pside);
 
 	delete pPartner;
 
@@ -1196,29 +1082,56 @@ done:
 	return ret;
 }
 
-
-// 判断partner是否为用户模式
-BOOL check_partner_user_mode()
+const TCHAR * get_tws_side_str(int side)
 {
-	const char customer_ui_data[] = "05 5A 05 00 00 20 00 0B 12";		// 检查customer ui
-	const char product_mode_data[] = "05 5A 05 00 00 20 00 0B 13";		// 检查pfoduct mode
-	BOOL partner_customer_ui;
-	BOOL partner_product_mode;
-
-	partner_customer_ui = send_partner_relay_cmd(customer_ui_data);
-	partner_product_mode = send_partner_relay_cmd(product_mode_data);
-
-	Log_d(_T("partner customer ui(%d), product mode(%d)"), partner_customer_ui, partner_product_mode);
-
-	if (partner_customer_ui == TRUE && partner_product_mode == FALSE)
+	if (side == LEFT_CHANNEL)
 	{
-		return TRUE;
+		return _T("left");
+	}
+	else if (side == RIGHT_CHANNEL)
+	{
+		return _T("right");
 	}
 	else
 	{
-		return FALSE;
+		return _T("Unkown");
+	}
+}
+
+
+// 判断partner是否为用户模式
+tws_mode_t get_partner_mode()
+{
+	const char customer_ui_data[] = "05 5A 05 00 00 20 00 0B 12";		// 检查customer ui
+	UINT32 partner_customer_ui;
+	UINT32 partner_product_mode;
+	UINT32 value;
+	int side = 0;
+	tws_mode_t mode;
+
+	value = send_partner_relay_cmd(customer_ui_data, &side);
+
+	partner_customer_ui = (value >> CUSTOMER_UI_INDEX) & 0x1;
+	partner_product_mode = (value >> CUSTOMER_PRODUCT_INDEX) & 0x1;
+
+	Log_d(_T("partner customer ui(%d), product mode(%d), side(%d)=%s"), partner_customer_ui, partner_product_mode, side, get_tws_side_str(side));
+
+	mode.tws_side = side & 0xff;
+
+	if ((partner_customer_ui == TRUE) && (partner_product_mode == FALSE))
+	{
+		mode.tws_mode = TWS_USER_MODE;
+	}
+	else if ((partner_customer_ui == FALSE) && (partner_product_mode == TRUE))
+	{
+		mode.tws_mode = TWS_PRODUCT_MODE;
+	}
+	else
+	{
+		mode.tws_mode = TWS_ERROR_MODE;
 	}
 
+	return mode;
 }
 
 
@@ -1299,4 +1212,28 @@ onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * prot
 	*plen = buffer_index;
 
 	return p;
+}
+
+void check_tws_mode()
+{
+	tws_mode_t agent;
+	tws_mode_t partner;
+
+	agent = get_agent_mode();
+	partner = get_partner_mode();
+
+	/* 数据传递给主线程 */
+	UCHAR *data_ptr = DBG_NEW UCHAR[2 * sizeof(tws_mode_t)];
+
+	if (!data_ptr)
+	{
+		Log_e(_T("no memory!"));
+		ASSERT(FALSE);
+	}
+
+	memcpy(data_ptr, &agent, sizeof(tws_mode_t));
+	UCHAR *tmp = data_ptr + sizeof(tws_mode_t);
+	memcpy(tmp, &partner, sizeof(tws_mode_t));
+
+	dlg_update_status_data(STATE_TWS_MODE_DATA, (void *)data_ptr);
 }
