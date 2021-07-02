@@ -242,3 +242,32 @@ void IOT_Log_Set_Level(QC_LOG_LEVEL level)
 {
 	g_log_level = level;
 }
+
+
+
+/* print the data buffer */
+void print_buffer_data_help(void *buff, UINT32 len, int line)
+{
+	TCHAR buffer[1024];
+	int i;
+	BYTE *ptr = (BYTE *)buff;
+	int index = 0;
+
+	if (len >= sizeof(buffer) / 3)
+	{
+		Log_e(_T("print buffer is low!"));
+		return;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
+
+
+	index = _stprintf(buffer, _T("%d:"), line);
+	for (i = 0; i < len; i++)
+	{
+		index += _stprintf(&buffer[index], _T("%02x "), ptr[i]);
+	}
+
+	Log_d(_T("%s"),  buffer);
+}
+

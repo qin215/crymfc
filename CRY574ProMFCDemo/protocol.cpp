@@ -30,7 +30,9 @@ BOOL bRunning = FALSE;
 CWinThread *pWorkThread;
 CString current_bt_device;
 
-
+BOOL check_partner_user_mode();
+BOOL check_agent_user_mode();
+onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *pindex);
 
 int Char2Int(TCHAR c)
 {
@@ -146,14 +148,14 @@ int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_
 	int i;
 	int index;
 
-	if (out_len < len * 2)
+	if (out_len < len * 3)
 	{
 		return -1;
 	}
 
 	for (i = 0, index = 0; i < len; i++)
 	{
-		index += sprintf((char *)&outBuff[index], "%02X", inBuff[i]);
+		index += sprintf_s((char *)&outBuff[index], out_len - index, "%02X ", inBuff[i]);
 	}
 
 	return index;
@@ -175,7 +177,7 @@ UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len)
 
 	if (!valid)
 	{
-		printf("qin spp format error!");
+		Log_e(_T("qin spp format error!"));
 		return 0;
 	}
 
@@ -508,27 +510,33 @@ done:
 UINT32 parse_spp_rsp_data(CString& strRSP)
 {
 	int nlen = strRSP.GetLength();
-	UCHAR *pbuff = DBG_NEW UCHAR[nlen];
+	UCHAR *pbuff;
 	UINT32 ret;
 
+	if (nlen == 0)
+	{
+		Log_e(_T("qin nlen == 0!"));
+		return 0;
+	}
+
+	pbuff = DBG_NEW UCHAR[nlen];
 	if (!pbuff)
 	{
 		bStopped = TRUE;
-		AfxMessageBox(_T("没有内存"));
+		Log_e(_T("qin no memory error!"));
 		PostQuitMessage(0);
 	}
 
 	int binlen = String2HexData(strRSP, pbuff);
-
 	if (binlen <= 0)
 	{
-		bStopped = TRUE;
-		AfxMessageBox(_T("返回值错误"));
-		PostQuitMessage(0);
+		Log_e(_T("origin spp str=%s"), strRSP);
+		goto done;
 	}
 
 	ret = parse_race_cmd_rsp(pbuff, binlen);
 
+done:
 	delete pbuff;
 
 	// 删除多余的0
@@ -573,44 +581,52 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 		goto done;				// 返回值错误，进行重发
 	}
 
-	onewire_frame_t *pFrame = (onewire_frame_t *)pbuff;
-	BOOL valid = FALSE;
-	// 05 5A 05 00 00 20 00 0B 03
-
-	uint16_t len = pFrame->len;
-	len += 4;			// added length & header & type
-	if (len <= binlen)
+	onewire_frame_t *pFrame = onewire_get_one_rsp_frame(RACE_CMD_FRAME_START, RACE_CMD_RSP, pbuff, &binlen);
+	if (pFrame)
 	{
-		valid = TRUE;
-	}
+		BOOL valid = FALSE;
+		// 05 5A 05 00 00 20 00 0B 03
 
-	if (!valid)
-	{
-		printf("qin spp format error!");
-		Log_e(_T("qin spp format error, raw data=%s"), strRSP);
-		goto done;
-	}
+		uint16_t len = pFrame->len;
+		len += 4;			// added length & header & type
+		if (len <= binlen)
+		{
+			valid = TRUE;
+		}
+
+		if (!valid)
+		{
+			printf("qin spp format error!");
+			Log_e(_T("qin spp format error, raw data=%s"), strRSP);
+			goto done;
+		}
 	
-	if (pFrame->param[0] == 0)
-	{
-		Log_e(_T("qin spp rsp error, earphone sw not support!, raw data=%s"), strRSP);
-		goto done;
+		if (pFrame->param[0] == 0)
+		{
+			Log_e(_T("qin spp rsp error, earphone sw not support!, raw data=%s"), strRSP);
+			goto done;
+		}
+
+		UCHAR *ptr = &pFrame->param[0];
+		ptr++;
+
+		*left_earphone = *((struct psensor_cali_struct *)ptr);
+		ptr += sizeof(struct psensor_cali_struct);
+		*right_earphone = *((struct psensor_cali_struct *)ptr);
+		ret = TRUE;
+
+		// 删除多余的0
+		strRSP = strRSP.Left(3 * len);
+		Log_d(_T("process recv spp data='%s'"), strRSP);
 	}
-
-	UCHAR *ptr = &pFrame->param[0];
-	ptr++;
-
-	*left_earphone = *((struct psensor_cali_struct *)ptr);
-	ptr += sizeof(struct psensor_cali_struct);
-	*right_earphone = *((struct psensor_cali_struct *)ptr);
-	ret = TRUE;
+	else
+	{
+		Log_e(_T("spp rsp error, raw data=%s"), strRSP);
+	}
 
 done:
 	delete pbuff;
 
-	// 删除多余的0
-	strRSP = strRSP.Left(3 * len);
-	Log_d(_T("process recv spp data='%s'"), strRSP);
 
 	return ret;
 }
@@ -699,6 +715,9 @@ UINT thread_process(LPVOID)
 	if (check_psensor_calibrated_2())
 	{
 	}
+
+	check_agent_user_mode();
+	check_partner_user_mode();
 
 	ret = 0;
 
@@ -819,4 +838,465 @@ void dlg_update_status_data(INT state, void *data_ptr)
 	{
 		::PostMessage(pDlg->m_hWnd, WM_UPDATE_STATUS, (WPARAM)state, (LPARAM)data_ptr);
 	}
+}
+
+
+// 判断agent是否为用户模式
+BOOL check_agent_user_mode()
+{
+	const char customer_ui_data[] = "05 5A 05 00 00 20 00 0B 12";		// 检查customer ui
+	const char product_mode_data[] = "05 5A 05 00 00 20 00 0B 13";		// 检查pfoduct mode
+	char* pcRecv = DBG_NEW char[4096];
+	INT retcode;
+	BOOL bCustomerUi;
+	BOOL bProductMode;
+	BOOL ret = FALSE;
+	int i;
+
+	for (i = 0; i < 3; i++)
+	{
+		retcode = CRYBT_SPPCommand(customer_ui_data, pcRecv, 1000, TRUE);
+		Log_d(_T("send spp cmd retcode=%d"), retcode);
+		CString strSPPRecv(pcRecv);
+		CString strInfo;
+
+		bCustomerUi = parse_spp_rsp_data(strSPPRecv);
+		strInfo.Format(_T("check customer ui Recv: %s"),strSPPRecv);
+		dlg_update_ui(strInfo);
+
+		retcode = CRYBT_SPPCommand(product_mode_data, pcRecv, 1000, TRUE);
+		Log_d(_T("send spp cmd retcode=%d"), retcode);
+		strSPPRecv = CString(pcRecv);
+
+		bProductMode = parse_spp_rsp_data(strSPPRecv);
+		strInfo.Format(_T("check product mode Recv:%s"), strSPPRecv);
+		dlg_update_ui(strInfo);
+
+		ret = (bCustomerUi == TRUE) && (bProductMode == FALSE);
+		Log_d(_T("agent customer ui(%d), product mode(%d)"), bCustomerUi, bProductMode);
+		if (ret)
+		{
+			break;
+		}
+	}
+
+	//
+	delete pcRecv;
+	pcRecv = NULL;
+
+	return ret;
+}
+
+
+#define TWS_PARTNER_ID 0x5
+UINT32 get_partner_id(CString& strRSP)
+{
+	int nlen = strRSP.GetLength();
+	UCHAR *pbuff;
+	UINT32 ret = 0;
+	int i;
+
+	if (nlen == 0)
+	{
+		Log_e(_T("qin nlen == 0!"));
+		return 0;
+	}
+
+	pbuff = DBG_NEW UCHAR[nlen];
+	if (!pbuff)
+	{
+		bStopped = TRUE;
+		Log_e(_T("qin no memory error!"));
+		PostQuitMessage(0);
+	}
+
+	int binlen = String2HexData(strRSP, pbuff);
+	if (binlen <= 0)
+	{
+		Log_e(_T("origin spp str=%s"), strRSP);
+		goto done;
+	}
+
+	if (pbuff[0] == RACE_CMD_FRAME_START && pbuff[1] == RACE_CMD_RSP)
+	{
+		race_cmd_t *pcmd = (race_cmd_t *)pbuff;
+
+		if (pcmd->frame_cmd != RACE_CMD_GET_PARTNER_ID)
+		{
+			Log_e(_T("race cmd id(%x) is not equal to 0xd000"), pcmd->frame_cmd);
+			goto done;
+		}
+		int payload_len = pcmd->frame_len - sizeof(pcmd->frame_cmd);
+		if (payload_len % 2 != 0)
+		{
+			Log_e(_T("race cmd payload len(%d) is not even"), payload_len);
+			goto done;
+		}
+
+		for (i = 0; i < payload_len; i += 2)
+		{
+			if (pcmd->payload[i] == TWS_PARTNER_ID)
+			{
+				ret = pcmd->payload[ i+ 1];
+				break;
+			}
+		}
+
+		if (i == payload_len)
+		{
+			Log_e(_T("not found TWS partner id"));
+		}
+		else
+		{
+			Log_d(_T("TWS partner id = 0x%x"), ret);
+		}
+	}
+	else
+	{
+		Log_e(_T("RACE cmd format error"));
+	}
+	
+done:
+	delete pbuff;
+
+	// 删除多余的0
+	strRSP = strRSP.Left(3 * 15);
+	Log_d(_T("recv spp data='%s'"), strRSP);
+
+	return ret;
+}
+
+
+
+// 构建从耳race cmd 转发包
+UCHAR * cons_relay_race_cmd(UCHAR id, LPCCH cmd_str)
+{
+	race_cmd_t *pcmd;
+	int plen = 0;
+	UCHAR *ret = NULL;
+
+	pcmd = (race_cmd_t *) DBG_NEW UCHAR[128];
+	if (!pcmd)
+	{
+		Log_e(_T("no memory error"));
+		return NULL;
+	}
+
+	pcmd->frame_start = RACE_CMD_FRAME_START;
+	pcmd->frame_type = RACE_CMD_REQ;
+	pcmd->frame_cmd = 0x0D01;
+	pcmd->payload[plen++] = TWS_PARTNER_ID;
+	pcmd->payload[plen++] = id;
+
+	TCHAR tbuff[128];
+	MultiByteToWideChar(CP_ACP, 0, cmd_str, -1, tbuff, sizeof(tbuff) / sizeof(TCHAR));
+	CString strCmd(tbuff);
+	UCHAR binData[128];
+	int binlen = String2HexData(strCmd, binData);
+	int left = 128 - sizeof(race_cmd_t) - 2;
+	if (left < binlen) 
+	{
+		Log_e(_T("left room %d is less than needed room %d"), left, binlen);
+		goto done;
+	}
+
+	memcpy(&pcmd->payload[plen], binData, binlen);
+	plen += binlen;
+	pcmd->frame_len = plen + sizeof(pcmd->frame_cmd);
+
+	int cmd_str_len = (pcmd->frame_len + 4) * 4;
+	UCHAR *pcmd_str = (UCHAR *) DBG_NEW UCHAR[cmd_str_len];
+	if (!pcmd_str) 
+	{
+		Log_e(_T("no memroy error"));
+		goto done;
+	}
+
+	if (Binary2HexData((const UCHAR *)pcmd, pcmd->frame_len + 4, pcmd_str, cmd_str_len) < 0)
+	{
+		Log_e(_T("convert binary to hex data error"));
+		delete pcmd_str;
+		goto done;
+	}
+	else
+	{
+		int slen = strlen((LPCCH)pcmd_str);
+		TCHAR *ptchr_buf = (TCHAR *) DBG_NEW TCHAR[slen + 1];
+
+		if (!ptchr_buf)
+		{
+			Log_e(_T("no memory error, len=%d"), slen);
+		}
+
+		memset(ptchr_buf, 0, (slen + 1) * sizeof(TCHAR));
+		MultiByteToWideChar(CP_ACP, 0, (LPCCH)pcmd_str, -1, ptchr_buf, slen + 1);
+
+		Log_d(_T("cons hex cmd ok= '%s'"), ptchr_buf);
+
+		delete ptchr_buf;
+	}
+
+	ret = pcmd_str;
+
+done:
+	delete pcmd;
+
+	return ret;
+}
+
+BYTE *get_partner_rsp_str(BYTE id, const CString& strRsp, int *plen)
+{
+	int nlen = strRsp.GetLength();
+	UCHAR *pbuff;
+	BYTE *ret = NULL;
+
+	if (nlen == 0)
+	{
+		Log_e(_T("qin nlen == 0!"));
+		return NULL;
+	}
+
+	pbuff = DBG_NEW UCHAR[nlen];
+	if (!pbuff)
+	{
+		Log_e(_T("qin no memory error!"));
+		goto done;
+	}
+
+	int binlen = String2HexData(strRsp, pbuff);
+	if (binlen <= 0)
+	{
+		Log_e(_T("origin spp str=%s"), strRsp);
+		goto done;
+	}
+
+	// 从BUFFER中找到回复帧数据
+	onewire_frame_t *ptr = onewire_get_one_rsp_frame(RACE_CMD_FRAME_START, RACE_CMD_RELAY_RSP, pbuff, &binlen);
+	if (ptr)
+	{
+		race_cmd_t *pcmd = (race_cmd_t *)ptr;
+
+		if (pcmd->frame_cmd != RACE_CMD_RELAY_PARTER_CMD)
+		{
+			Log_e(_T("race cmd id(%x) is not equal to 0xd000"), pcmd->frame_cmd);
+			goto done;
+		}
+
+		relay_rsp_t *prsp = &pcmd->u.rsp;
+		if (prsp->dst_type != 0x5)
+		{
+			Log_e(_T("relay dst type(%d) error"), prsp->dst_type);
+			goto done;
+		}
+		
+		if (prsp->dst_id != id) 
+		{
+			Log_e(_T("relay dst id error, dst id=%d, id=%d"), prsp->dst_id, id);
+			goto done;
+		}
+
+		// ok. 获取正确的rsp响应
+		int part_rsp_len = pcmd->frame_len - sizeof(relay_rsp_t) - sizeof(pcmd->frame_cmd) + 1;
+		ret = (BYTE *) DBG_NEW BYTE[part_rsp_len];
+		if (!ret)
+		{
+			Log_e(_T("no memory error"));
+			goto done;
+		}
+
+		memcpy(ret, prsp->partner_data, part_rsp_len);
+		*plen = part_rsp_len;
+	}
+	else
+	{
+		Log_e(_T("RACE cmd format error"));
+	}
+
+done:
+	delete pbuff;
+
+	// 删除多余的0
+
+	return ret;
+}
+
+BOOL send_partner_relay_cmd(const char *partner_cmd)
+{
+	const char partner_id_cmd[] = "05 5A 02 00 00 0D";		// 获取partner id
+	char* pcRecv = DBG_NEW char[4096];
+	int i;
+	int retcode;
+	BYTE id;
+	BOOL ret = FALSE;
+	BYTE *pPartner = NULL;
+	int len;
+
+	for (i = 0; i < 3; i++)
+	{
+		retcode = CRYBT_SPPCommand(partner_id_cmd, pcRecv, 1000, TRUE);
+		Log_d(_T("send retry (%d) spp cmd retcode=%d"), i, retcode);
+		CString strSPPRecv(pcRecv);
+		Log_d(_T("recv partner id rsp(%s)"), strSPPRecv);
+
+		id = get_partner_id(strSPPRecv);
+		if (id != 0)
+		{
+			break;
+		}
+	}
+
+	if (i == 3)
+	{
+		Log_e(_T("not get partner id"));
+		goto done;
+	}
+
+	UCHAR *pcmd = cons_relay_race_cmd(id, partner_cmd);
+	if (!pcmd)
+	{
+		Log_e(_T("construct partner cmd error"));
+		goto done;
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+		retcode = CRYBT_SPPCommand((const char *)pcmd, pcRecv, 1000, TRUE);
+		Log_d(_T("send retry (%d) spp cmd retcode=%d"), i, retcode);
+		CString strSPPRecv(pcRecv);
+		
+		Log_d(_T("Get relay spp rsp:'%s'"), strSPPRecv);
+		pPartner = get_partner_rsp_str(id, strSPPRecv, &len);
+		if (!pPartner)
+		{
+			Log_e(_T("get partner retry(%d) data error"), i);
+		}
+		else
+		{
+			break;
+		}
+	}
+	if (i == 3)
+	{
+		goto release_race_cmd;
+	}
+
+	// 解析partner数据
+	Log_d(_T("get partner data len=%d"), len);
+	print_buffer_data(pPartner, len);
+	ret = parse_race_cmd_rsp(pPartner, len);
+
+	delete pPartner;
+
+release_race_cmd:
+	delete pcmd;
+
+done:
+	delete pcRecv;
+
+	return ret;
+}
+
+
+// 判断partner是否为用户模式
+BOOL check_partner_user_mode()
+{
+	const char customer_ui_data[] = "05 5A 05 00 00 20 00 0B 12";		// 检查customer ui
+	const char product_mode_data[] = "05 5A 05 00 00 20 00 0B 13";		// 检查pfoduct mode
+	BOOL partner_customer_ui;
+	BOOL partner_product_mode;
+
+	partner_customer_ui = send_partner_relay_cmd(customer_ui_data);
+	partner_product_mode = send_partner_relay_cmd(product_mode_data);
+
+	Log_d(_T("partner customer ui(%d), product mode(%d)"), partner_customer_ui, partner_product_mode);
+
+	if (partner_customer_ui == TRUE && partner_product_mode == FALSE)
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+
+}
+
+
+/*
+ * id1/id2 帧头识别关键字节
+ */
+kal_uint8 *get_rsp_frame(BYTE id1, BYTE id2, kal_uint8* ptr, int len, uint8_t **next_frame, int *left_len)
+{
+	int i;
+	const CHAR *p;
+	const onewire_frame_t *pframe = NULL;
+	int frame_len;
+	
+	for (i = 0, p = (const CHAR *)ptr; i < len; i++, p++)
+	{
+		 if (*p == id1 && (*(p + 1) == id2))
+		 {
+			pframe = (const onewire_frame_t *)p;
+
+			frame_len = pframe->len + sizeof(pframe->len) + 2; 		// the length of frame length \ header \ type 
+			if (frame_len <= (len - i))
+			{
+				*next_frame = (uint8_t *)(p + frame_len);
+				*left_len = len - i - frame_len;
+
+				return (kal_uint8 *)pframe;
+			}
+			
+			// 不够一帧
+			*next_frame = (uint8_t *)p;
+			*left_len = len - i;
+			return NULL;
+		 }
+	}
+
+	// 未找到帧头
+	*next_frame = NULL;
+	*left_len = 0;
+	
+	return NULL;
+}
+
+
+/*
+ * buffer中找到关键字所表示的帧数据
+ */
+onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *plen)
+{
+	int left;
+	uint8_t *next;
+	onewire_frame_t *p;
+	int buffer_index = *plen;
+
+	print_buffer_data(protocol_buffer, buffer_index);
+
+	p = (onewire_frame_t *)get_rsp_frame(id1, id2, protocol_buffer, buffer_index, &next, &left);
+	if (!p)
+	{
+		if (next != NULL)
+		{
+			memmove(protocol_buffer, next, left);
+			buffer_index = left;
+		}
+		else
+		{
+			memset(protocol_buffer, 0, sizeof(protocol_buffer));
+			buffer_index = 0;
+		}
+
+		return NULL;
+	}
+	else
+	{
+		print_buffer_data((void *)p, p->len + 4);
+	}
+
+	buffer_index = left;
+	*plen = buffer_index;
+
+	return p;
 }

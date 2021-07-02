@@ -44,8 +44,97 @@ extern "C" {
 		UINT16 base_value;
 		UINT16 gray_value;
 	} psensor_cali_data_t;
+
+	typedef struct race_cmd_relay_header_struct 
+	{
+		BYTE dst_type;
+		BYTE dst_id;
+		BYTE partner_data[1];
+	} relay_rsp_t;
+
+#define payload u.rpayload
+
+	typedef struct race_cmd_struct 
+	{
+		UCHAR frame_start;
+		UCHAR frame_type;
+		UINT16 frame_len;
+		UINT16 frame_cmd;
+
+		union 
+		{
+			BYTE rpayload[1];
+			relay_rsp_t rsp; 
+		} u;
+
+	} race_cmd_t;
+
+
 #pragma pack(pop)
 #define API_OK 0
+
+#ifndef kal_uint8 
+#define kal_uint8 unsigned char
+#endif
+
+	enum _RACE_CMD_ENUM 
+	{
+		PSENSOR_RACE_CAL_CT = 3,
+		PSENSOR_RACE_CAL_G2 = 4,
+		PSENSOR_RACE_SWITCH_DBG = 5,
+		PSENSOR_RACE_ENTER_DISCOVERY = 6,
+		PSENSOR_RACE_ENTER_TWS_PAIRING = 7,
+		PSENSOR_RACE_SENSOR_INIT_OK = 8,			// ONLY for debuggging
+		PSENSOR_RACE_IN_EAR = 9,
+		PSENSOR_RACE_OUT_EAR = 0xA,
+		PSENSOR_RACE_RESET_FACTORY = 0XB,
+		PSENSOR_RACE_ANC_ON = 0XC,
+		PSENSOR_RACE_ANC_OFF = 0XD,
+		PSENSOR_RACE_SPP_LOG_ON = 0XE,
+		PSENSOR_RACE_SPP_LOG_OFF = 0XF,
+
+		PSENSOR_DUMP_INFO = 0X10,
+		PSENSOR_TEST_FAST_PAIRING = 0X11,
+		PSENSOR_CHECK_CUSTOMER_UI = 0X12,
+		PSENSOR_CHECK_PRODUCT_MODE = 0X13,
+		PSENSOR_CHECK_PSENSOR_SIMU = 0X14,
+		PSENSOR_SET_PRODUCT_MODE = 0x15,
+		PSENSOR_CLEAN_PRODUCT_MODE = 0x16,
+		PSENSOR_GET_CALI_STATUS = 0x17,
+
+		PSENSOR_SET_CUSTOMER_UI = 0X18,
+		PSENSOR_CLEAN_CUSTOMER_UI = 0X19,
+
+		PSENSOR_GET_INEAR_STATUS = 0x1A,
+
+
+		PSENSOR_GET_NEAR_THRESHOLD_HIGH = 0X1B,
+		PSENSOR_GET_NEAR_THRESHOLD_LOW = 0X1C,
+
+		PSENSOR_GET_FAR_THRESHOLD_HIGH = 0X1D,
+		PSENSOR_GET_FAR_THRESHOLD_LOW = 0X1E,
+
+		PSENSOR_GET_RAW_DATA_HIGH = 0X20,
+		PSENSOR_GET_RAW_DATA_LOW = 0x21,
+
+		PSENSOR_QUERY_CALI_STATUS = 0X22,
+		PSENSOR_ONE_PARAM_END = 0X23,
+
+		PSENSOR_GET_CALI_DATA = 0X30,
+		PSENSOR_GET_RAW_DATA = 0x31,
+	};
+
+
+#define RACE_CMD_FRAME_START 0X5
+#define RACE_CMD_REQ	0X5A
+#define RACE_CMD_RSP	0x5B
+#define RACE_CMD_RELAY_RSP 0x5D
+#define RACE_CMD_GET_PARTNER_ID 0X0D00
+#define RACE_CMD_RELAY_PARTER_CMD	0x0D01
+
+
+
+
 
 UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len);
 

@@ -1,7 +1,6 @@
 
 // CRY574ProMFCDemoDlg.cpp : 实现文件
 //
-#define _CRTDBG_MAP_ALLOC
 #include "stdafx.h"
 #include "CRY574ProMFCDemo.h"
 #include "CRY574ProMFCDemoDlg.h"

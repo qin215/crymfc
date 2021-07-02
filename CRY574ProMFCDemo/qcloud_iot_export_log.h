@@ -111,6 +111,10 @@ TCHAR* HAL_Timer_current(void) ;
  */
 Boolean MyLogMessageHandler(LPCTSTR message);
 
+void print_buffer_data_help(void *buff, UINT32 len, int line);
+
+#define print_buffer_data(x, y) print_buffer_data_help(x, y, __LINE__)
+
 #ifdef __cplusplus
 }
 #endif
