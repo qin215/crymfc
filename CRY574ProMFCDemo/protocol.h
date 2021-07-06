@@ -8,6 +8,10 @@ extern "C" {
 #define uint8_t unsigned char
 #define uint16_t unsigned short
 
+#ifndef Boolean
+#define Boolean BOOL
+#endif
+
 	enum 
 	{
 		STATE_INIT,
@@ -20,7 +24,8 @@ extern "C" {
 		STATE_CALI_STATUS,
 		STATE_CALI_VALUE,
 		STATE_TWS_CALI_DATA,
-		STATE_TWS_MODE_DATA
+		STATE_TWS_MODE_DATA,
+		STATE_TWS_VERSION_DATA
 	};
 
 	enum 
@@ -53,7 +58,17 @@ extern "C" {
 		BYTE partner_data[1];
 	} relay_rsp_t;
 
+	typedef struct race_cmd_sw_version_struct 
+	{
+		BYTE status;
+		BYTE recv_count;
+		BYTE role;
+		BYTE str_len;
+		CHAR version[1];
+	} race_rsp_sw_version_t;
+
 #define payload u.rpayload
+#define sw_ver_rsp u.sw_rsp
 
 	typedef struct race_cmd_struct 
 	{
@@ -66,10 +81,23 @@ extern "C" {
 		{
 			BYTE rpayload[1];
 			relay_rsp_t rsp; 
+			race_rsp_sw_version_t sw_rsp;
 		} u;
 
 	} race_cmd_t;
 
+
+
+	typedef struct onewire_struct 
+	{
+		uint8_t header;
+		uint8_t type;
+		uint16_t len;
+		uint16_t cmd;
+		uint8_t event;
+		uint8_t side;
+		uint8_t param[1];
+	}  onewire_frame_t;
 
 #pragma pack(pop)
 #define API_OK 0
@@ -77,6 +105,8 @@ extern "C" {
 #ifndef kal_uint8 
 #define kal_uint8 unsigned char
 #endif
+
+#define FUNC_DLL_EXPORT
 
 	enum _RACE_CMD_ENUM 
 	{
@@ -126,12 +156,13 @@ extern "C" {
 	};
 
 
-#define RACE_CMD_FRAME_START 0X5
-#define RACE_CMD_REQ	0X5A
-#define RACE_CMD_RSP	0x5B
-#define RACE_CMD_RELAY_RSP 0x5D
-#define RACE_CMD_GET_PARTNER_ID 0X0D00
+#define RACE_CMD_FRAME_START		0X5
+#define RACE_CMD_REQ				0X5A
+#define RACE_CMD_RSP				0x5B
+#define RACE_CMD_RELAY_RSP			0x5D
+#define RACE_CMD_GET_PARTNER_ID		0X0D00
 #define RACE_CMD_RELAY_PARTER_CMD	0x0D01
+#define RACE_CMD_GET_SW_VERSION		0x1C07
 
 /*
  * return true use customer ui, otherwise use system ui.
@@ -141,6 +172,9 @@ extern "C" {
 #define CUSTOMER_PSENSOR_SIM_INDEX 		2			// 开发板模拟出入耳
 #define CUSTOMER_SPP_LOG_INDEX			3
 #define CUSTOM_CONF_NUM					(CUSTOMER_SPP_LOG_INDEX + 1)
+
+#define SPP_RSP_ERROR	0xFFFFFFFF
+#define TWS_PARTNER_ID 0x5
 
 enum 
 {
@@ -155,6 +189,14 @@ typedef struct tws_mode_struct
 	UCHAR tws_side;
 	UCHAR tws_mode;
 } tws_mode_t;
+
+typedef struct tws_sw_version_struct
+{
+	TCHAR *pAgent;
+	TCHAR *pPartner;
+} tws_sw_version_t;
+
+typedef UINT32 (*race_cmd_rsp_callback_func)(race_cmd_t *pcmd , int data_len, int *pside);
 
 extern CWinThread *pWorkThread;
 extern BOOL bStopped;
@@ -189,6 +231,29 @@ const TCHAR * get_tws_side_str(int side);
 
 void check_tws_mode();
 
+/*
+ * buffer中找到关键字所表示的帧数据
+ */
+onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *plen);
+
+TCHAR * get_agent_sw_version();
+TCHAR * get_partner_sw_version();
+
+UINT32 get_partner_id(CString& strRSP);
+
+UCHAR * cons_relay_race_cmd(UCHAR id, LPCCH cmd_str);
+
+
+BYTE *get_partner_rsp_str(BYTE id, const CString& strRsp, int *plen);
+
+UINT32 send_partner_relay_cmd_help(const char *partner_cmd, race_cmd_rsp_callback_func cbFunc);
+
+void check_software_version();
+
+FUNC_DLL_EXPORT Boolean get_config_string_value(const TCHAR *segment, const TCHAR *key, const TCHAR *default_value, TCHAR *out_buf, int len);
+
+
+FUNC_DLL_EXPORT Boolean get_config_int_value(const TCHAR *segment, const TCHAR *key, int *pvalue, int default_value);
 
 #ifdef __cplusplus
 }

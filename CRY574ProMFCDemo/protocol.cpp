@@ -9,19 +9,7 @@
 #include "protocol.h"
 #include "mywin.h"
 
-#pragma pack(push)
-#pragma pack(1)
-typedef struct onewire_struct 
-{
-	uint8_t header;
-	uint8_t type;
-	uint16_t len;
-	uint16_t cmd;
-	uint8_t event;
-	uint8_t side;
-	uint8_t param[1];
-}  onewire_frame_t;
-#pragma pack(pop)
+
 
 BOOL bStopped = TRUE;
 BOOL bRunning = FALSE;
@@ -32,8 +20,6 @@ CString current_bt_device;
 tws_mode_t get_agent_mode();
 tws_mode_t get_partner_mode();
 onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *pindex);
-
-#define SPP_RSP_ERROR	0xFFFFFFFF
 
 UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len, int *pside)
 {
@@ -510,158 +496,6 @@ done:
 }
 
 
-// 线程运行程序
-//CRYBT_InitializePro
-// CRYBT_ResetDongle
-//
-
-UINT thread_process(LPVOID)
-{
-	CString info;
-	int retcode;
-	int ret = -1;
-	int i;
-	CString btdevice;
-
-	current_bt_device.Empty();
-
-	dlg_update_status_ui(STATE_PROCESS);
-	bRunning = TRUE;
-
-	//retcode = CRYBT_ResetDongle();
-	//Log_d(_T("reset dongle retcode=%d"), retcode);
-
-	for (i = 0; i < 10; i++)
-	{
-		btdevice = begin_inquiry_bt_device();
-		if (bStopped)
-		{
-			i = 10;
-			dlg_update_status_ui(STATE_ABORT);
-			break;
-		}
-
-		if (btdevice.IsEmpty())
-		{
-			continue;
-		}
-
-		Log_d(_T("bt device mac: %s"), btdevice);
-		if (!connect_bt_device(btdevice))
-		{
-			if ((retcode = CRYBT_Disconnect()) == API_OK)
-			{
-				info.Format(_T("Disconnected"));
-			} 
-			else
-			{
-				info.Format(_T("error code is %d"),retcode);
-			}
-			dlg_update_ui(info);
-			Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
-			continue;
-		}
-
-		if (check_bt_name())
-		{
-			current_bt_device = btdevice;
-			break;
-		}
-		else
-		{
-			goto disconn_bt;
-		}
-	}
-
-	if (i == 10)
-	{
-		goto disconn_bt;
-	}
-
-	// TODO: 在此添加控件通知处理程序代码
-	retcode = CRYBT_SetDefaultProfile(1);
-	Log_d(_T("CRYBT_SetDefaultProfile retcode=%d"), retcode);
-	dlg_update_ui(_T("配置SPP成功"));
-
-	if (!connect_bt_spp(btdevice))
-	{
-		Log_e(_T("connect device(%s) failed!"), btdevice);
-		dlg_update_status_ui(STATE_ABORT);
-		goto disconn_bt;
-	}
-
-	if (check_psensor_calibrated_2())
-	{
-	}
-
-	check_tws_mode();
-
-	ret = 0;
-
-disconn_spp:
-	if ((retcode = CRYBT_DisConnectSPP()) == API_OK)
-	{
-		info.Format(_T("Disconnect SPP"));
-	} 
-	else
-	{
-		info.Format(_T("error code is %d"),retcode);
-	}
-
-	Log_d(_T("CRYBT_DisConnectSPP retcode=%d"), retcode);
-
-	dlg_update_ui(info);
-
-disconn_bt:
-	if ((retcode = CRYBT_Disconnect()) == API_OK)
-	{
-		info.Format(_T("Disconnected"));
-	} 
-	else
-	{
-		info.Format(_T("error code is %d"),retcode);
-	}
-	dlg_update_ui(info);
-	Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
-
-close_bt:
-	//retcode = CRYBT_ResetDongle();
-	//Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
-
-	dlg_update_ui(_T("done!"));
-	dlg_update_status_ui(STATE_DONE);
-
-	bRunning = FALSE;
-	return ret;
-}
-
-
-//
-// 蓝牙光感查询校准程序
-// 1. 初始化
-// 2. inquiry
-// 3. pairing
-// 4. spp enable
-// 5. spp connect
-// 6. psensor cali flag check
-// 7. psensor thershold value check
-// 8. spp disconnect
-// 9. bt close.
-INT32 psensor_check_process()
-{
-	while (bRunning)
-	{
-		Sleep(500);
-	}
-
-	bStopped = FALSE;
-
-	pWorkThread = AfxBeginThread((AFX_THREADPROC)thread_process, 0);
-
-	return -1;
-}
-
-
 /*
  * 更新主线程中的UI显示
  */
@@ -776,7 +610,6 @@ tws_mode_t get_agent_mode()
 }
 
 
-#define TWS_PARTNER_ID 0x5
 UINT32 get_partner_id(CString& strRSP)
 {
 	int nlen = strRSP.GetLength();
@@ -1236,4 +1069,160 @@ void check_tws_mode()
 	memcpy(tmp, &partner, sizeof(tws_mode_t));
 
 	dlg_update_status_data(STATE_TWS_MODE_DATA, (void *)data_ptr);
+}
+
+
+
+
+// 线程运行程序
+//CRYBT_InitializePro
+// CRYBT_ResetDongle
+//
+UINT thread_process(LPVOID)
+{
+	CString info;
+	int retcode;
+	int ret = -1;
+	int i;
+	CString btdevice;
+
+	current_bt_device.Empty();
+
+	dlg_update_status_ui(STATE_PROCESS);
+	bRunning = TRUE;
+
+	//retcode = CRYBT_ResetDongle();
+	//Log_d(_T("reset dongle retcode=%d"), retcode);
+
+	for (i = 0; i < 10; i++)
+	{
+		btdevice = begin_inquiry_bt_device();
+		if (bStopped)
+		{
+			i = 10;
+			dlg_update_status_ui(STATE_ABORT);
+			break;
+		}
+
+		if (btdevice.IsEmpty())
+		{
+			continue;
+		}
+
+		Log_d(_T("bt device mac: %s"), btdevice);
+		if (!connect_bt_device(btdevice))
+		{
+			if ((retcode = CRYBT_Disconnect()) == API_OK)
+			{
+				info.Format(_T("Disconnected"));
+			} 
+			else
+			{
+				info.Format(_T("error code is %d"),retcode);
+			}
+			dlg_update_ui(info);
+			Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
+			continue;
+		}
+
+		if (check_bt_name())
+		{
+			current_bt_device = btdevice;
+			break;
+		}
+		else
+		{
+			goto disconn_bt;
+		}
+	}
+
+	if (i == 10)
+	{
+		goto disconn_bt;
+	}
+
+	// TODO: 在此添加控件通知处理程序代码
+	retcode = CRYBT_SetDefaultProfile(1);
+	Log_d(_T("CRYBT_SetDefaultProfile retcode=%d"), retcode);
+	dlg_update_ui(_T("配置SPP成功"));
+
+	if (!connect_bt_spp(btdevice))
+	{
+		Log_e(_T("connect device(%s) failed!"), btdevice);
+		dlg_update_status_ui(STATE_ABORT);
+		goto disconn_bt;
+	}
+
+	if (check_psensor_calibrated_2())
+	{
+	}
+
+
+	check_software_version();
+
+	check_tws_mode();		// 最后一个
+
+
+	ret = 0;
+
+
+	if ((retcode = CRYBT_DisConnectSPP()) == API_OK)
+	{
+		info.Format(_T("Disconnect SPP"));
+	} 
+	else
+	{
+		info.Format(_T("error code is %d"),retcode);
+	}
+
+	Log_d(_T("CRYBT_DisConnectSPP retcode=%d"), retcode);
+
+	dlg_update_ui(info);
+
+disconn_bt:
+	if ((retcode = CRYBT_Disconnect()) == API_OK)
+	{
+		info.Format(_T("Disconnected"));
+	} 
+	else
+	{
+		info.Format(_T("error code is %d"),retcode);
+	}
+	dlg_update_ui(info);
+	Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
+
+	//retcode = CRYBT_ResetDongle();
+	//Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
+
+	dlg_update_ui(_T("done!"));
+	dlg_update_status_ui(STATE_DONE);
+
+	bRunning = FALSE;
+	return ret;
+}
+
+
+//
+// 蓝牙光感查询校准程序
+// 1. 初始化
+// 2. inquiry
+// 3. pairing
+// 4. spp enable
+// 5. spp connect
+// 6. psensor cali flag check
+// 7. psensor thershold value check
+// 8. spp disconnect
+// 9. bt close.
+INT32 psensor_check_process()
+{
+	while (bRunning)
+	{
+		Sleep(500);
+	}
+
+	bStopped = FALSE;
+
+	pWorkThread = AfxBeginThread((AFX_THREADPROC)thread_process, 0);
+
+	return -1;
 }

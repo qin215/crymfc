@@ -13,7 +13,9 @@ extern "C" {
 #define _IN_           
 #define _OU_     
 
-#define Boolean int
+#ifndef Boolean
+#define Boolean BOOL
+#endif
 
 /**
  * 日志输出等级

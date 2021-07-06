@@ -16,7 +16,9 @@ extern "C"
 
 #include "qcloud_iot_export_log.h"
 
-#define Boolean int
+#ifndef Boolean
+#define Boolean BOOL
+#endif
 
 //#define DLL_EXPORT 1
 

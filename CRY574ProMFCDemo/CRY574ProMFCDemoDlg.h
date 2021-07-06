@@ -74,6 +74,7 @@ private:
 	CStatic m_right_cali_value;
 
 	CStatic m_tws_mode;
+	CStatic m_sw_version;
 
 	CComboBox m_combox;
 
@@ -82,10 +83,13 @@ private:
 	INT m_test_total;
 	INT m_test_ok_nr;
 
+	CString m_default_sw_version;
+
 	enum 
 	{
 		TEST_PSENSOR_INDEX = 0,
 		TEST_USER_MODE_INDEX,
+		TEST_SW_VERSION_INDEX,
 		TEST_NR
 	};
 

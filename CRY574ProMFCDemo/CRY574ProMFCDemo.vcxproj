@@ -120,6 +120,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="config.cpp" />
     <ClCompile Include="CRY574ProMFCDemo.cpp" />
     <ClCompile Include="CRY574ProMFCDemoDlg.cpp" />
     <ClCompile Include="HAL_OS_win32.cpp" />
@@ -130,6 +131,7 @@
     </ClCompile>
     <ClCompile Include="protocol.cpp" />
     <ClCompile Include="utils.cpp" />
+    <ClCompile Include="sw_version.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc" />

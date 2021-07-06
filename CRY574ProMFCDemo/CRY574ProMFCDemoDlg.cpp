@@ -89,6 +89,8 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_COMBO_TYPE, m_combox);
 	DDX_Control(pDX, IDC_STATIC_MODE, m_tws_mode);
+
+	DDX_Control(pDX, IDC_STATIC_SW_VERSION, m_sw_version);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -283,8 +285,31 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	retcode = CRYBT_ResetDongle();
 	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
 
-	m_test_bitmap = (1 << TEST_PSENSOR_INDEX) | (1 << TEST_USER_MODE_INDEX);
+	m_test_bitmap = 0;
+
+	for (int i = 0; i < TEST_NR; i++)
+	{
+		m_test_bitmap |= (1 << i);
+	}
+	
 	memset(&m_test_array[0], 0, sizeof(m_test_array));
+	
+	TCHAR szVersion[32];
+
+#define DEFAULT_SW_VERSION _T("2.8.1.1")
+	if (!get_config_string_value(_T("setting"), _T("version"), DEFAULT_SW_VERSION, szVersion, sizeof(szVersion) / sizeof(TCHAR)))
+	{
+		Log_e(_T("Get software version error, use default version(%s)"), DEFAULT_SW_VERSION);
+	}
+	else
+	{
+		Log_d(_T("Get software version ok, use version(%s)"), szVersion);
+	}
+
+	CWnd *pWnd = (CWnd *)GetDlgItem(IDC_STATIC_CHECK_SW_VERSION);
+	pWnd->SetWindowText(szVersion);
+
+	m_default_sw_version = CString(szVersion);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -1333,7 +1358,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		{
 			if (m_test_bitmap & (1 << i))
 			{
-				ret = ret & m_test_array[i];
+				ret = ret && m_test_array[i];
 			}
 		}
 
@@ -1344,6 +1369,51 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		else
 		{
 			dlg_update_status_ui(STATE_FAIL);
+		}
+
+		delete ptr;
+	}
+	else if (m_state == STATE_TWS_VERSION_DATA)
+	{
+		tws_sw_version_t *ptr = (tws_sw_version_t *)lParam;
+		TCHAR *pVersion;
+		BOOL ret = FALSE;
+		CString strPrompt;
+		CString strVersion;
+
+		pVersion = ptr->pAgent;
+		if (pVersion)
+		{
+			strVersion = CString(pVersion);
+			strPrompt = _T("主耳版本：") +  strVersion + _T(",");
+
+			if (strVersion == m_default_sw_version)
+			{
+				ret = TRUE;
+			}
+		}
+
+		pVersion = ptr->pPartner;
+		if (pVersion)
+		{
+			strVersion = CString(pVersion);
+			strPrompt += _T("付耳版本：") + strVersion;
+
+			ret = ret && (strVersion == m_default_sw_version);
+		}
+
+		m_sw_version.SetWindowText(strPrompt);
+		
+		m_test_array[TEST_SW_VERSION_INDEX] = ret;
+
+		if (ptr->pAgent)
+		{
+			delete ptr->pAgent;
+		}
+
+		if (ptr->pPartner)
+		{
+			delete ptr->pPartner;
 		}
 
 		delete ptr;
