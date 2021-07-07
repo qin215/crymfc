@@ -81,6 +81,9 @@
     <ClCompile Include="config.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="anc_tunning.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc">

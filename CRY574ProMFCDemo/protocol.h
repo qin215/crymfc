@@ -7,6 +7,7 @@ extern "C" {
 
 #define uint8_t unsigned char
 #define uint16_t unsigned short
+#define kal_uint16 unsigned short
 
 #ifndef Boolean
 #define Boolean BOOL
@@ -67,8 +68,21 @@ extern "C" {
 		CHAR version[1];
 	} race_rsp_sw_version_t;
 
+	typedef struct race_cmd_anc_gain_struct 
+	{
+		BYTE status;
+		BYTE id;
+		kal_uint16 left_ff_gain;
+		kal_uint16 left_fb_gain;
+		kal_uint16 right_ff_gain;
+		kal_uint16 right_fb_gain;
+		kal_uint16 left_spk_gain;
+		kal_uint16 right_spk_gain;
+	} race_rsp_anc_gain_t;
+
 #define payload u.rpayload
 #define sw_ver_rsp u.sw_rsp
+#define anc_gain_rsp u.gain_rsp
 
 	typedef struct race_cmd_struct 
 	{
@@ -82,6 +96,7 @@ extern "C" {
 			BYTE rpayload[1];
 			relay_rsp_t rsp; 
 			race_rsp_sw_version_t sw_rsp;
+			race_rsp_anc_gain_t gain_rsp;
 		} u;
 
 	} race_cmd_t;
@@ -163,6 +178,8 @@ extern "C" {
 #define RACE_CMD_GET_PARTNER_ID		0X0D00
 #define RACE_CMD_RELAY_PARTER_CMD	0x0D01
 #define RACE_CMD_GET_SW_VERSION		0x1C07
+
+#define RACE_CMD_WRITE_ANC_GAIN		0X0E06
 
 /*
  * return true use customer ui, otherwise use system ui.
@@ -254,6 +271,10 @@ FUNC_DLL_EXPORT Boolean get_config_string_value(const TCHAR *segment, const TCHA
 
 
 FUNC_DLL_EXPORT Boolean get_config_int_value(const TCHAR *segment, const TCHAR *key, int *pvalue, int default_value);
+
+BOOL write_agent_anc_gain();
+
+BOOL write_partner_anc_gain();
 
 #ifdef __cplusplus
 }

@@ -1159,9 +1159,9 @@ UINT thread_process(LPVOID)
 
 
 	check_software_version();
-
 	check_tws_mode();		// 最后一个
-
+	write_agent_anc_gain();
+	write_partner_anc_gain();
 
 	ret = 0;
 
