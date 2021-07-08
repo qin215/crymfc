@@ -16,12 +16,13 @@ BOOL bRunning = FALSE;
 
 CWinThread *pWorkThread;
 CString current_bt_device;
+CString current_bt_name(_T("Philips TAT5506"));
 
 tws_mode_t get_agent_mode();
 tws_mode_t get_partner_mode();
 onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *pindex);
 
-UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len, int *pside)
+UINT32 parse_race_cmd_rsp(race_cmd_t *pdata, int data_len, int *pside)
 {
 	onewire_frame_t *pFrame = (onewire_frame_t *)pdata;
 	BOOL valid = FALSE;
@@ -140,7 +141,7 @@ BOOL check_bt_name()
 		CString strName(pcName);
 		strinfo.Format(_T("蓝牙名: %s"),strName);
 
-		if (strName == (_T("Philips TAT5506")))
+		if (strName == current_bt_name)
 		{
 			ret = TRUE;
 		}
@@ -398,7 +399,7 @@ UINT32 parse_spp_rsp_data(CString& strRSP, int *pside)
 		goto done;
 	}
 
-	ret = parse_race_cmd_rsp(pbuff, binlen, pside);
+	ret = parse_race_cmd_rsp((race_cmd_t *)pbuff, binlen, pside);
 
 done:
 	delete pbuff;
@@ -644,13 +645,13 @@ UINT32 get_partner_id(CString& strRSP)
 
 		if (pcmd->frame_cmd != RACE_CMD_GET_PARTNER_ID)
 		{
-			Log_e(_T("race cmd id(%x) is not equal to 0xd000"), pcmd->frame_cmd);
+			Log_e(_T("race cmd id(%x) is not equal to 0xd000 error"), pcmd->frame_cmd);
 			goto done;
 		}
 		int payload_len = pcmd->frame_len - sizeof(pcmd->frame_cmd);
 		if (payload_len % 2 != 0)
 		{
-			Log_e(_T("race cmd payload len(%d) is not even"), payload_len);
+			Log_e(_T("race cmd payload len(%d) is not even error"), payload_len);
 			goto done;
 		}
 
@@ -665,7 +666,7 @@ UINT32 get_partner_id(CString& strRSP)
 
 		if (i == payload_len)
 		{
-			Log_e(_T("not found TWS partner id"));
+			Log_e(_T("not found TWS partner id error"));
 		}
 		else
 		{
@@ -902,7 +903,7 @@ UINT32 send_partner_relay_cmd(const char *partner_cmd, int *pside)
 	// 解析partner数据
 	Log_d(_T("get partner data len=%d"), len);
 	print_buffer_data(pPartner, len);
-	ret = parse_race_cmd_rsp(pPartner, len, pside);
+	ret = parse_race_cmd_rsp((race_cmd_t *)pPartner, len, pside);
 
 	delete pPartner;
 
@@ -1162,6 +1163,8 @@ UINT thread_process(LPVOID)
 	check_tws_mode();		// 最后一个
 	write_agent_anc_gain();
 	write_partner_anc_gain();
+
+	send_system_factory_cmd();
 
 	ret = 0;
 

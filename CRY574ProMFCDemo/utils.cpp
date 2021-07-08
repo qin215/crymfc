@@ -136,3 +136,38 @@ int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_
 	return index;
 }
 
+const TCHAR *setting_name[] =
+{
+	_T("psensor"),
+	_T("user_mode"),
+	_T("software_version"),
+	_T("factory_reset"),
+	NULL
+};
+
+
+int get_test_item_setting_bitmap()
+{
+	int value = 0;
+	int i;
+	int bitmap = 0;
+
+	for (i = 0; i < TEST_NR; i++)
+	{
+		if (!get_config_int_value(_T("setting"), setting_name[i], &value, 1))
+		{
+			Log_e(_T("Get setting failed, use default value(%d)"), 1);
+		}
+		else
+		{
+			Log_d(_T("Get setting ok, use value(%d)"), value);
+		}
+
+		if (value == 1)
+		{
+			bitmap |= (1 << i);
+		}
+	}
+
+	return bitmap;
+}

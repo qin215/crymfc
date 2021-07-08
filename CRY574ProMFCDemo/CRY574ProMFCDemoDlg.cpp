@@ -260,20 +260,6 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	m_test_total = 0;
 	m_test_ok_nr = 0;
 
-	if (CRYBT_InitializePro() == TRUE)
-	{
-		dlg_update_ui(_T("初始化完成"));
-	}
-	else
-	{
-		dlg_update_ui(_T("初始化失败"));
-		bRunning = FALSE;
-		dlg_update_status_ui(STATE_ERROR);
-	
-		AfxMessageBox(_T("初始化失败，请检查DONGLE!"));
-
-		PostQuitMessage(0);
-	}
 
 	m_combox.SetCurSel(0);
 
@@ -285,17 +271,10 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	retcode = CRYBT_ResetDongle();
 	Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
 
-	m_test_bitmap = 0;
 
-	for (int i = 0; i < TEST_NR; i++)
-	{
-		m_test_bitmap |= (1 << i);
-	}
-	
-	memset(&m_test_array[0], 0, sizeof(m_test_array));
-	
-	TCHAR szVersion[32];
+	TCHAR szVersion[128];
 
+	// 软件版本号管理
 #define DEFAULT_SW_VERSION _T("2.8.1.1")
 	if (!get_config_string_value(_T("setting"), _T("version"), DEFAULT_SW_VERSION, szVersion, sizeof(szVersion) / sizeof(TCHAR)))
 	{
@@ -310,6 +289,47 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	pWnd->SetWindowText(szVersion);
 
 	m_default_sw_version = CString(szVersion);
+
+
+	// 蓝牙名称设置
+	if (!get_config_string_value(_T("setting"), _T("btname"), _T("Philips TAT5506"), szVersion, sizeof(szVersion) / sizeof(TCHAR)))
+	{
+		Log_e(_T("Get bt name failed, use default version(%s)"), _T("Philips TAT5506"));
+	}
+	else
+	{
+		Log_d(_T("Get bt name ok, use name(%s)"), szVersion);
+	}
+
+	current_bt_name = CString(szVersion);
+
+
+	// 测试项目管理
+	m_test_bitmap = get_test_item_setting_bitmap();
+
+	memset(&m_test_array[0], 0, sizeof(m_test_array));
+
+	const CHAR msg[] = {0x53, 0x59, 0x4e, 0x54, 0x41, 0x58, 0x20, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x00};
+	TCHAR buff[128];
+
+	MultiByteToWideChar(CP_ACP, 0, msg, -1, buff, sizeof(buff) / sizeof(TCHAR));
+	Log_d(_T("test string='%s'"), buff);
+
+
+	if (CRYBT_InitializePro() == TRUE)
+	{
+		dlg_update_ui(_T("初始化完成"));
+	}
+	else
+	{
+		dlg_update_ui(_T("初始化失败"));
+		bRunning = FALSE;
+		dlg_update_status_ui(STATE_ERROR);
+
+		AfxMessageBox(_T("初始化失败，请检查DONGLE!"));
+
+		PostQuitMessage(0);
+	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

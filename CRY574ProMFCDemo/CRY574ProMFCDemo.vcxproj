@@ -133,6 +133,7 @@
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="sw_version.cpp" />
     <ClCompile Include="anc_tunning.cpp" />
+    <ClCompile Include="system_cmd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc" />

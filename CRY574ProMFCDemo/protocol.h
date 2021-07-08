@@ -200,6 +200,15 @@ enum
 	TWS_ERROR_MODE
 };
 
+enum 
+{
+	TEST_PSENSOR_INDEX = 0,
+	TEST_USER_MODE_INDEX,
+	TEST_SW_VERSION_INDEX,
+	TEST_FACTORY_RESET_INDEX,
+	TEST_NR
+};
+
 
 typedef struct tws_mode_struct
 {
@@ -219,7 +228,9 @@ extern CWinThread *pWorkThread;
 extern BOOL bStopped;
 extern BOOL bRunning;
 
-UINT32 parse_race_cmd_rsp(const uint8_t *pdata, int data_len);
+extern CString current_bt_name;
+
+UINT32 parse_race_cmd_rsp(race_cmd_t *pdata, int data_len, int *pside);
 
 void dlg_update_ui(const CString& promptinfo);
 
@@ -275,6 +286,10 @@ FUNC_DLL_EXPORT Boolean get_config_int_value(const TCHAR *segment, const TCHAR *
 BOOL write_agent_anc_gain();
 
 BOOL write_partner_anc_gain();
+
+void send_system_factory_cmd();
+
+int get_test_item_setting_bitmap();
 
 #ifdef __cplusplus
 }

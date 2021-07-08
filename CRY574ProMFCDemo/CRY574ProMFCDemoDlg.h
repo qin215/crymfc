@@ -85,13 +85,15 @@ private:
 
 	CString m_default_sw_version;
 
+	/*
 	enum 
 	{
 		TEST_PSENSOR_INDEX = 0,
 		TEST_USER_MODE_INDEX,
 		TEST_SW_VERSION_INDEX,
+		TEST_FACTORY_RESET_INDEX,
 		TEST_NR
-	};
+	}; */
 
 	int m_test_array[TEST_NR];
 	int m_test_bitmap;

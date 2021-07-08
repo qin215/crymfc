@@ -9,6 +9,8 @@
 #include "protocol.h"
 #include "mywin.h"
 
+#define CONFIG_FILE_NAME _T("config.ini")
+
 /* 
  * 获取 uart.ini 中, 某个段中的 key 对应的 string 值
  */
@@ -37,7 +39,7 @@ FUNC_DLL_EXPORT Boolean get_config_string_value(const TCHAR *segment, const TCHA
 		return FALSE;
 	}
 
-	_tcscpy(ptr + 1, _TEXT("config.ini"));
+	_tcscpy(ptr + 1, CONFIG_FILE_NAME);
 
 	GetPrivateProfileString(segment, key, default_value, out_buf, len, lpszPath);
 
@@ -73,7 +75,7 @@ FUNC_DLL_EXPORT Boolean get_config_int_value(const TCHAR *segment, const TCHAR *
 		return FALSE;
 	}
 
-	_tcscpy(ptr + 1, _TEXT("uart.ini"));
+	_tcscpy(ptr + 1, CONFIG_FILE_NAME);
 
 	*pvalue = GetPrivateProfileInt(segment, key, default_value, lpszPath);
 
