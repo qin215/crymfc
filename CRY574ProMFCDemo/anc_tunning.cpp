@@ -113,7 +113,7 @@ BOOL write_agent_anc_gain()
 		CString strInfo;
 
 		ret = parse_writing_anc_gain_rsp(strSPPRecv);
-		strInfo.Format(_T("check sw version Recv: %s"),strSPPRecv);
+		strInfo.Format(_T("check writing anc gain Recv: %s"),strSPPRecv);
 		dlg_update_ui(strInfo);
 
 		if (ret)

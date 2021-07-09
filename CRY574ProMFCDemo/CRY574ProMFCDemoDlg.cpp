@@ -309,12 +309,13 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 	memset(&m_test_array[0], 0, sizeof(m_test_array));
 
+#if 0
 	const CHAR msg[] = {0x53, 0x59, 0x4e, 0x54, 0x41, 0x58, 0x20, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x00};
 	TCHAR buff[128];
 
 	MultiByteToWideChar(CP_ACP, 0, msg, -1, buff, sizeof(buff) / sizeof(TCHAR));
 	Log_d(_T("test string='%s'"), buff);
-
+#endif
 
 	if (CRYBT_InitializePro() == TRUE)
 	{
@@ -1326,7 +1327,27 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 	}
 	else if (m_state == STATE_DONE)
 	{
+		BOOL ret;
+
 		::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
+
+		ret = TRUE;
+		for (int i = 0; i < TEST_UI_SHOW_NR; i++)
+		{
+			if (m_test_bitmap & (1 << i))
+			{
+				ret = ret && m_test_array[i];
+			}
+		}
+
+		if (ret)
+		{
+			dlg_update_status_ui(STATE_SUCCESS);
+		}
+		else
+		{
+			dlg_update_status_ui(STATE_FAIL);
+		}
 	}
 	else if (m_state == STATE_CALI_STATUS)
 	{
@@ -1372,24 +1393,6 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		partner = agent + 1;
 		ret = UpdateTwsModeData(agent, partner);
 		m_test_array[TEST_USER_MODE_INDEX] = ret;
-
-		ret = TRUE;
-		for (int i = 0; i < TEST_NR; i++)		// 放到最后一个测试项目
-		{
-			if (m_test_bitmap & (1 << i))
-			{
-				ret = ret && m_test_array[i];
-			}
-		}
-
-		if (ret)
-		{
-			dlg_update_status_ui(STATE_SUCCESS);
-		}
-		else
-		{
-			dlg_update_status_ui(STATE_FAIL);
-		}
 
 		delete ptr;
 	}

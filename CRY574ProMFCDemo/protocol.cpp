@@ -1154,17 +1154,33 @@ UINT thread_process(LPVOID)
 		goto disconn_bt;
 	}
 
-	if (check_psensor_calibrated_2())
+	int test_items = get_test_item_setting_bitmap();
+
+	if (test_items & (1 << TEST_PSENSOR_INDEX))
 	{
+		check_psensor_calibrated_2();
+	}
+	
+	if (test_items & (1 << TEST_SW_VERSION_INDEX))
+	{
+		check_software_version();
 	}
 
+	if (test_items & (1 << TEST_USER_MODE_INDEX))
+	{
+		check_tws_mode();		// 最后一个
+	}
 
-	check_software_version();
-	check_tws_mode();		// 最后一个
-	write_agent_anc_gain();
-	write_partner_anc_gain();
+	if (test_items & (1 << TEST_WRITE_ANC_GAIN_INDEX))
+	{
+		write_agent_anc_gain();
+		write_partner_anc_gain();
+	}
 
-	send_system_factory_cmd();
+	if (test_items & (1 << TEST_FACTORY_RESET_INDEX))
+	{
+		send_system_factory_cmd();
+	}
 
 	ret = 0;
 

@@ -9,6 +9,23 @@
 #include "protocol.h"
 #include "mywin.h"
 
+const TCHAR *setting_name[TEST_NR] =
+{
+	_T("psensor"),			// 0
+	_T("user_mode"),
+	_T("software_version"),
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,					// 7
+
+	_T("write_anc_gain"),
+	_T("factory_reset"),
+};
+
+
+
 int Char2Int(TCHAR c)
 {
 	switch(c)
@@ -136,16 +153,10 @@ int Binary2HexData(const UCHAR * inBuff, const int len, UCHAR *outBuff, int out_
 	return index;
 }
 
-const TCHAR *setting_name[] =
-{
-	_T("psensor"),
-	_T("user_mode"),
-	_T("software_version"),
-	_T("factory_reset"),
-	NULL
-};
 
-
+/*
+ * 获取测试设置项
+ */
 int get_test_item_setting_bitmap()
 {
 	int value = 0;
@@ -154,13 +165,18 @@ int get_test_item_setting_bitmap()
 
 	for (i = 0; i < TEST_NR; i++)
 	{
+		if (!setting_name[i])
+		{
+			continue;
+		}
+
 		if (!get_config_int_value(_T("setting"), setting_name[i], &value, 1))
 		{
-			Log_e(_T("Get setting failed, use default value(%d)"), 1);
+			Log_e(_T("Get setting(%s) failed, use default value(%d)"), setting_name[i], 1);
 		}
 		else
 		{
-			Log_d(_T("Get setting ok, use value(%d)"), value);
+			Log_d(_T("Get setting(%s) ok, use value(%d)"), setting_name[i], value);
 		}
 
 		if (value == 1)
