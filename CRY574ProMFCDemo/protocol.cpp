@@ -1182,6 +1182,8 @@ UINT thread_process(LPVOID)
 		send_system_factory_cmd();
 	}
 
+	test_read_nvkey();
+
 	ret = 0;
 
 

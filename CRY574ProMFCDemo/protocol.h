@@ -80,9 +80,16 @@ extern "C" {
 		kal_uint16 right_spk_gain;
 	} race_rsp_anc_gain_t;
 
+	typedef struct race_cmd_nvkey_struct 
+	{
+		kal_uint16 nvkey_len;
+		byte data[1];
+	} race_rsp_nvkey_t;
+
 #define payload u.rpayload
 #define sw_ver_rsp u.sw_rsp
 #define anc_gain_rsp u.gain_rsp
+#define nvkey_value_rsp u.nvkey_rsp
 
 	typedef struct race_cmd_struct 
 	{
@@ -97,6 +104,7 @@ extern "C" {
 			relay_rsp_t rsp; 
 			race_rsp_sw_version_t sw_rsp;
 			race_rsp_anc_gain_t gain_rsp;
+			race_rsp_nvkey_t nvkey_rsp;
 		} u;
 
 	} race_cmd_t;
@@ -179,7 +187,10 @@ extern "C" {
 #define RACE_CMD_RELAY_PARTER_CMD	0x0D01
 #define RACE_CMD_GET_SW_VERSION		0x1C07
 
+
 #define RACE_CMD_WRITE_ANC_GAIN		0X0E06
+
+#define RACE_CMD_READ_NVKEY			0X0A00
 
 /*
  * return true use customer ui, otherwise use system ui.
@@ -292,6 +303,8 @@ BOOL write_partner_anc_gain();
 void send_system_factory_cmd();
 
 int get_test_item_setting_bitmap();
+
+void test_read_nvkey();
 
 #ifdef __cplusplus
 }

@@ -87,6 +87,9 @@
     <ClCompile Include="system_cmd.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="nvitem.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc">
