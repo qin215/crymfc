@@ -3,3 +3,4 @@ ipch/
 *.obj
 log/
 Release/
+*.sdf
