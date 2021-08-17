@@ -134,6 +134,7 @@
     <ClCompile Include="sw_version.cpp" />
     <ClCompile Include="anc_tunning.cpp" />
     <ClCompile Include="system_cmd.cpp" />
+    <ClCompile Include="psensor_check.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc" />

@@ -310,68 +310,6 @@ void check_psensor_cali_value()
 }
 
 
-// 第二版本，发送一次指令
-BOOL check_psensor_calibrated_2()
-{
-	const char tws_cali_data_cmd[] = "05 5A 05 00 00 20 00 0B 30";
-	BOOL ret = FALSE;
-	int i;
-
-	char* pcRecv = DBG_NEW char[4096];
-	INT retcode;
-
-	// 入耳数据
-	retcode = CRYBT_SPPCommand(tws_cali_data_cmd, pcRecv, 1000, TRUE);
-	Log_d(_T("send spp cmd retcode=%d"), retcode);
-	CString strSPPRecv(pcRecv);
-	CString strInfo;
-	psensor_cali_data_t left;
-	psensor_cali_data_t right;
-
-	for (i = 0; i < 3; i++)		// 重试3次
-	{
-		ret = parse_spp_rsp_data_2(strSPPRecv, &left, &right);
-		strInfo.Format(_T("SPP TWS Recv:%s"),strSPPRecv);
-		dlg_update_ui(strInfo);
-		if (!ret)
-		{
-			strInfo.Format(_T("spp TWS CMD error, please check sw version > V2.9"));
-			Log_e(_T("retry count=%d, spp TWS CMD error, please check sw version, recv rsp='%s'"), i, strSPPRecv);
-			dlg_update_ui(strInfo);
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	if (i == 3)
-	{
-		goto done;
-	}
-	
-	/* 数据传递给主线程 */
-	UCHAR *data_ptr = DBG_NEW UCHAR[2 * sizeof(psensor_cali_data_t)];
-
-	if (!data_ptr)
-	{
-		Log_e(_T("no memory!"));
-		ASSERT(FALSE);
-	}
-
-	memcpy(data_ptr, &left, sizeof(psensor_cali_data_t));
-	UCHAR *tmp = data_ptr + sizeof(psensor_cali_data_t);
-	memcpy(tmp, &right, sizeof(psensor_cali_data_t));
-
-	dlg_update_status_data(STATE_TWS_CALI_DATA, (void *)data_ptr);
-	ret = TRUE;
-done:
-	delete pcRecv;
-	
-	return ret;
-}
-
-
 UINT32 parse_spp_rsp_data(CString& strRSP, int *pside)
 {
 	int nlen = strRSP.GetLength();
@@ -1159,6 +1097,8 @@ UINT thread_process(LPVOID)
 	if (test_items & (1 << TEST_PSENSOR_INDEX))
 	{
 		check_psensor_calibrated_2();
+		get_psensor_rawdata();
+		check_psensor_rawdata();
 	}
 	
 	if (test_items & (1 << TEST_SW_VERSION_INDEX))
@@ -1173,8 +1113,8 @@ UINT thread_process(LPVOID)
 
 	if (test_items & (1 << TEST_WRITE_ANC_GAIN_INDEX))
 	{
-		write_agent_anc_gain();
-		write_partner_anc_gain();
+	//	write_agent_anc_gain();			// 保险先去掉
+	//	write_partner_anc_gain();
 	}
 
 	if (test_items & (1 << TEST_FACTORY_RESET_INDEX))

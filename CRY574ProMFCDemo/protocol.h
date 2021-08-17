@@ -80,9 +80,18 @@ extern "C" {
 		kal_uint16 right_spk_gain;
 	} race_rsp_anc_gain_t;
 
+	typedef struct race_cmd_rawdata_struct 
+	{
+		BYTE cmd;
+		BYTE side;
+		BYTE result;
+		kal_uint16 raw_data;
+	} race_rsp_rawdata_t;
+
 #define payload u.rpayload
 #define sw_ver_rsp u.sw_rsp
 #define anc_gain_rsp u.gain_rsp
+#define psensor_rawdata_rsp u.rawdata_rsp
 
 	typedef struct race_cmd_struct 
 	{
@@ -97,6 +106,7 @@ extern "C" {
 			relay_rsp_t rsp; 
 			race_rsp_sw_version_t sw_rsp;
 			race_rsp_anc_gain_t gain_rsp;
+			race_rsp_rawdata_t rawdata_rsp;
 		} u;
 
 	} race_cmd_t;
@@ -181,6 +191,8 @@ extern "C" {
 
 #define RACE_CMD_WRITE_ANC_GAIN		0X0E06
 
+#define CUSTOMER_RACE_CMD			0X2000
+
 /*
  * return true use customer ui, otherwise use system ui.
  */
@@ -192,6 +204,10 @@ extern "C" {
 
 #define SPP_RSP_ERROR	0xFFFFFFFF
 #define TWS_PARTNER_ID 0x5
+
+
+#define ONEWIRE_LEFT_CHANNEL				0           // by qin
+#define ONEWIRE_RIGHT_CHANNEL			1
 
 enum 
 {
@@ -231,6 +247,7 @@ extern BOOL bStopped;
 extern BOOL bRunning;
 
 extern CString current_bt_name;
+extern CString current_bt_device;
 
 UINT32 parse_race_cmd_rsp(race_cmd_t *pdata, int data_len, int *pside);
 
@@ -292,6 +309,17 @@ BOOL write_partner_anc_gain();
 void send_system_factory_cmd();
 
 int get_test_item_setting_bitmap();
+
+// ¸øpartner·¢ËÍÖ¸Áî
+BOOL send_race_cmd_to_partner(const char *pcmd, race_cmd_rsp_callback_func callback);
+
+BOOL send_race_cmd_to_agent(const char *pcmd, race_cmd_rsp_callback_func callback);
+
+void get_psensor_rawdata();
+
+BOOL check_psensor_rawdata();
+
+BOOL check_psensor_calibrated_2();
 
 #ifdef __cplusplus
 }
