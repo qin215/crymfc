@@ -104,11 +104,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <None Include="ClassDiagram1.cd" />
+    <None Include="ClassDiagram2.cd" />
     <None Include="ReadMe.txt" />
     <None Include="res\CRY574ProMFCDemo.ico" />
     <None Include="res\CRY574ProMFCDemo.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ColorStatic.h" />
     <ClInclude Include="CRY574ProAPIWrapper.h" />
     <ClInclude Include="CRY574ProMFCDemo.h" />
     <ClInclude Include="CRY574ProMFCDemoDlg.h" />
@@ -120,6 +123,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ColorStatic.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="CRY574ProMFCDemo.cpp" />
     <ClCompile Include="CRY574ProMFCDemoDlg.cpp" />
@@ -135,6 +139,7 @@
     <ClCompile Include="anc_tunning.cpp" />
     <ClCompile Include="system_cmd.cpp" />
     <ClCompile Include="psensor_check.cpp" />
+    <ClCompile Include="ep_color.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc" />

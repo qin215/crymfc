@@ -26,7 +26,9 @@ extern "C" {
 		STATE_CALI_VALUE,
 		STATE_TWS_CALI_DATA,
 		STATE_TWS_MODE_DATA,
-		STATE_TWS_VERSION_DATA
+		STATE_TWS_VERSION_DATA,
+		STATE_TWS_EP_COLOR,
+		STATE_TWS_RAW_DATA
 	};
 
 	enum 
@@ -88,10 +90,19 @@ extern "C" {
 		kal_uint16 raw_data;
 	} race_rsp_rawdata_t;
 
+	typedef struct race_cmd_ep_color_struct
+	{
+		BYTE cmd;
+		BYTE side;
+		BYTE result;
+		BYTE color;
+	} race_rsp_color_t;
+
 #define payload u.rpayload
 #define sw_ver_rsp u.sw_rsp
 #define anc_gain_rsp u.gain_rsp
 #define psensor_rawdata_rsp u.rawdata_rsp
+#define ep_color_rsp u.color_rsp
 
 	typedef struct race_cmd_struct 
 	{
@@ -107,6 +118,7 @@ extern "C" {
 			race_rsp_sw_version_t sw_rsp;
 			race_rsp_anc_gain_t gain_rsp;
 			race_rsp_rawdata_t rawdata_rsp;
+			race_rsp_color_t color_rsp;
 		} u;
 
 	} race_cmd_t;
@@ -209,6 +221,12 @@ extern "C" {
 #define ONEWIRE_LEFT_CHANNEL				0           // by qin
 #define ONEWIRE_RIGHT_CHANNEL			1
 
+
+#define EP_COLOR_BLACK	0X00
+#define EP_COLOR_WHITE	0X01
+
+#define EP_COLOR_INVALID_VALUE -1
+
 enum 
 {
 	TWS_USER_MODE = 0,		// 用户模式
@@ -221,6 +239,7 @@ enum
 	TEST_PSENSOR_INDEX = 0,
 	TEST_USER_MODE_INDEX,
 	TEST_SW_VERSION_INDEX,
+	TEST_EP_COLOR_INDEX,
 	TEST_UI_SHOW_NR = 8,			// 0~7 进行UI显示
 	TEST_WRITE_ANC_GAIN_INDEX = 8,
 	TEST_FACTORY_RESET_INDEX,		// 恢复出厂设置最后一项
@@ -320,6 +339,12 @@ void get_psensor_rawdata();
 BOOL check_psensor_rawdata();
 
 BOOL check_psensor_calibrated_2();
+
+void check_ep_color();
+
+int get_test_item_setting_value(const TCHAR *pkey);
+
+race_rsp_rawdata_t * get_ep_psensor_rawdata(int channel);
 
 #ifdef __cplusplus
 }

@@ -6,6 +6,7 @@
 #include <vector>
 #include "afxwin.h"
 #include "protocol.h"
+#include "ColorStatic.h"
 using namespace std;
 
 
@@ -67,14 +68,17 @@ private:
 
 	INT		m_state;
 
-	CStatic m_left_cali_status;
-	CStatic m_left_cali_value;
+	CColorStatic m_left_cali_status;
+	CColorStatic m_left_cali_value;
 
-	CStatic m_right_cali_status;
-	CStatic m_right_cali_value;
+	CColorStatic m_right_cali_status;
+	CColorStatic m_right_cali_value;
 
-	CStatic m_tws_mode;
-	CStatic m_sw_version;
+	CColorStatic m_tws_mode;
+	CColorStatic m_sw_version;
+
+	CColorStatic m_ep_color;
+	CColorStatic m_psensor_rawdata;
 
 	CComboBox m_combox;
 
@@ -132,4 +136,6 @@ public:
 
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+
+	HBRUSH ChangeCtrlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 };

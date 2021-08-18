@@ -90,6 +90,9 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_TYPE, m_combox);
 	DDX_Control(pDX, IDC_STATIC_MODE, m_tws_mode);
 
+	DDX_Control(pDX, IDC_STATIC_COLOR, m_ep_color);
+	DDX_Control(pDX, IDC_STATIC_RAWDATA, m_psensor_rawdata);
+
 	DDX_Control(pDX, IDC_STATIC_SW_VERSION, m_sw_version);
 }
 
@@ -307,7 +310,7 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	// 测试项目管理
 	m_test_bitmap = get_test_item_setting_bitmap();
 
-	memset(&m_test_array[0], 0, sizeof(m_test_array));
+	memset(&m_test_array[0], -1, sizeof(m_test_array));			// -1 表示初始化, TRUE 测试结果OK， FALSE 测试结果失败
 
 #if 0
 	const CHAR msg[] = {0x53, 0x59, 0x4e, 0x54, 0x41, 0x58, 0x20, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x00};
@@ -953,11 +956,34 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 
 	m_edit_status.SetWindowText(_T("测试中..."));
 	m_state = STATE_INIT;
-	m_left_cali_status.SetWindowText(_T("待定"));
-	m_left_cali_value.SetWindowText(_T("待定"));
 
-	m_right_cali_status.SetWindowText(_T("待定"));
-	m_right_cali_value.SetWindowText(_T("待定"));
+#define INIT_COLOR_REF	RGB(100, 100, 100)
+	m_left_cali_status.SetForeColor(RGB(255, 255, 255));
+	m_left_cali_status.SetBkColor(INIT_COLOR_REF);
+
+	m_left_cali_value.SetForeColor(RGB(255, 255, 255));
+	m_left_cali_value.SetBkColor(INIT_COLOR_REF);
+
+	m_right_cali_status.SetForeColor(RGB(255, 255, 255));
+	m_right_cali_status.SetBkColor(INIT_COLOR_REF);
+
+	m_right_cali_value.SetForeColor(RGB(255, 255, 255));
+	m_right_cali_value.SetBkColor(INIT_COLOR_REF);
+
+	m_ep_color.SetForeColor(RGB(255, 255, 255));
+	m_ep_color.SetBkColor(INIT_COLOR_REF);
+
+	m_tws_mode.SetForeColor(RGB(255, 255, 255));
+	m_tws_mode.SetBkColor(INIT_COLOR_REF);
+
+	m_psensor_rawdata.SetForeColor(RGB(255, 255, 255));
+	m_psensor_rawdata.SetBkColor(INIT_COLOR_REF);
+
+	m_sw_version.SetForeColor(RGB(255, 255, 255));
+	m_sw_version.SetBkColor(INIT_COLOR_REF);
+
+
+	memset(&m_test_array[0], -1, sizeof(m_test_array));			// -1 表示初始化, TRUE 测试结果OK， FALSE 测试结果失败
 
 	::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
 
@@ -1054,14 +1080,14 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 
 		if ((pdata->gray_value < pdata->gray_value) || (pdata->gray_value - pdata->base_value <= 0x100))
 		{
-			prompt.Format(_T("%s 入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准失败！"),strSide, pdata->gray_value , pdata->base_value);
-			Log_d(_T("%s in ear value=0x%04x, out ear value=0x%04x, FAILED."), strEnSide, pdata->gray_value , pdata->base_value);
+			prompt.Format(_T("入耳校准值:%d(%X), 出耳校准值:%d(%X), 校准失败！"), pdata->gray_value, pdata->gray_value , pdata->base_value, pdata->base_value);
+			Log_d(_T("bda(%s) %s in ear value=0x%04x, out ear value=0x%04x, FAILED."), current_bt_device, strEnSide, pdata->gray_value , pdata->base_value);
 			//AfxMessageBox(prompt);
 		}
 		else
 		{
-			prompt.Format(_T("%s入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准成功！"),  strSide, pdata->gray_value , pdata->base_value);
-			Log_d(_T("%s in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), strEnSide, pdata->gray_value , pdata->base_value);
+			prompt.Format(_T("入耳校准值:%d(%X), 出耳校准值:%d(%X), 校准成功！"), pdata->gray_value, pdata->gray_value, pdata->base_value, pdata->base_value);
+			Log_d(_T("bda(%s) %s in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), current_bt_device, strEnSide, pdata->gray_value , pdata->base_value);
 			ret = TRUE;
 		}
 
@@ -1336,7 +1362,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		{
 			if (m_test_bitmap & (1 << i))
 			{
-				ret = ret && m_test_array[i];
+				ret = ret && (m_test_array[i] == TRUE);
 			}
 		}
 
@@ -1362,24 +1388,65 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		psensor_cali_data_t *pleft;
 		psensor_cali_data_t *pright;
 		BOOL ret;
+		BOOL rawdata_ret;
 		void *ptr = (UCHAR *)lParam;
+
+#define FONT_WHITE_COLOR RGB(255, 255, 255)
+#define FONT_BLACK_COLOR RGB(0, 0, 0)
 
 		pleft = (psensor_cali_data_t *)lParam;
 		ret = UpdatePsensorData(pleft);
-		pright = pleft + 1;
-		ret = UpdatePsensorData(pright) && ret;
-
-		m_test_array[TEST_PSENSOR_INDEX] = ret;
-#if 0
+		m_left_cali_status.SetForeColor(FONT_BLACK_COLOR);
+		m_left_cali_value.SetForeColor(FONT_BLACK_COLOR);
 		if (ret)
 		{
-			dlg_update_status_ui(STATE_SUCCESS);
+			m_left_cali_status.SetBkColor(RGB(0, 255, 0));
+			m_left_cali_value.SetBkColor(RGB(0, 255, 0));
 		}
 		else
 		{
-			dlg_update_status_ui(STATE_FAIL);
+			m_left_cali_status.SetBkColor(RGB(255, 0, 0));
+			m_left_cali_value.SetBkColor(RGB(255, 0, 0));
 		}
-#endif
+		pright = pleft + 1;
+		
+		m_right_cali_status.SetForeColor(FONT_BLACK_COLOR);
+		m_right_cali_value.SetForeColor(FONT_BLACK_COLOR);
+		if (UpdatePsensorData(pright))
+		{
+			m_right_cali_status.SetBkColor(RGB(0, 255, 0));
+			m_right_cali_value.SetBkColor(RGB(0, 255, 0));
+		}
+		else
+		{
+			m_right_cali_status.SetBkColor(RGB(255, 0, 0));
+			m_right_cali_value.SetBkColor(RGB(255, 0, 0));
+			ret = FALSE;
+		}
+
+		m_psensor_rawdata.SetForeColor(FONT_BLACK_COLOR);
+		rawdata_ret = check_psensor_rawdata();
+		if (rawdata_ret)
+		{
+			m_psensor_rawdata.SetBkColor(RGB(0, 255, 0));
+		}
+		else
+		{
+			m_psensor_rawdata.SetBkColor(RGB(255, 0, 0));
+		}
+
+		ret =  rawdata_ret && ret;
+
+		CString strPrompt;
+		race_rsp_rawdata_t *rawleft = get_ep_psensor_rawdata(ONEWIRE_LEFT_CHANNEL);
+		race_rsp_rawdata_t *rawright = get_ep_psensor_rawdata(ONEWIRE_RIGHT_CHANNEL);
+
+
+		strPrompt.Format(_T("左耳光感值:%d(0x%x), 右耳光感值:%d(0x%x)"), rawleft->raw_data, rawleft->raw_data, rawright->raw_data, rawright->raw_data);
+		m_psensor_rawdata.SetWindowText(strPrompt);
+
+		m_test_array[TEST_PSENSOR_INDEX] = ret;
+
 		delete ptr;
 	}
 	else if (m_state == STATE_TWS_MODE_DATA)
@@ -1393,6 +1460,15 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		partner = agent + 1;
 		ret = UpdateTwsModeData(agent, partner);
 		m_test_array[TEST_USER_MODE_INDEX] = ret;
+		m_tws_mode.SetForeColor(FONT_BLACK_COLOR);
+		if (ret)
+		{
+			m_tws_mode.SetBkColor(RGB(0, 255, 0));
+		}
+		else
+		{
+			m_tws_mode.SetBkColor(RGB(255, 0, 0));
+		}
 
 		delete ptr;
 	}
@@ -1428,6 +1504,16 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		m_sw_version.SetWindowText(strPrompt);
 		
 		m_test_array[TEST_SW_VERSION_INDEX] = ret;
+		m_sw_version.SetForeColor(FONT_BLACK_COLOR);
+
+		if (ret)
+		{
+			m_sw_version.SetBkColor(RGB(0, 255, 0));
+		}
+		else
+		{
+			m_sw_version.SetBkColor(RGB(255, 0, 0));
+		}
 
 		if (ptr->pAgent)
 		{
@@ -1441,9 +1527,78 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 
 		delete ptr;
 	}
+	else if (m_state == STATE_TWS_EP_COLOR)
+	{
+		int *ptr = (int *)lParam;
+		int *tmp = ptr;
+		int left_color;
+		int right_color;
+		BOOL ret = FALSE;
+		CString strPrompt;
+		CString strColor;
+
+		left_color = *ptr++;
+		right_color = *ptr++;
+
+		int color_value = get_test_item_setting_value(_T("color"));			// 
+		ret = (left_color == right_color) && (left_color == color_value);
+		m_test_array[TEST_EP_COLOR_INDEX] = ret;
+
+		if (left_color == EP_COLOR_BLACK)
+		{
+			strColor = CString(_T("黑色"));
+		}
+		else if (left_color == EP_COLOR_WHITE)
+		{
+			strColor = CString(_T("白色"));
+		}
+		else 
+		{
+			strColor = CString(_T("未知"));
+		}
+
+		strPrompt = _T("左耳：") +  strColor + _T(",");
+
+		if (right_color == EP_COLOR_BLACK)
+		{
+			strColor = CString(_T("黑色"));
+		}
+		else if (right_color == EP_COLOR_WHITE)
+		{
+			strColor = CString(_T("白色"));
+		}
+		else 
+		{
+			strColor = CString(_T("未知"));
+		}
+
+		strPrompt += _T("右耳：") +  strColor;
+		m_ep_color.SetWindowText(strPrompt);
+		m_ep_color.SetForeColor(FONT_BLACK_COLOR);
+		if (ret)
+		{
+			m_ep_color.SetBkColor(RGB(0, 255, 0));
+		}
+		else
+		{
+			m_ep_color.SetBkColor(RGB(255, 96, 96));
+		}
+	
+		delete tmp;
+	}
 
 	return 0;
 }
+
+/*
+ * 根据测试结果对文字进行背景渲染
+ */
+HBRUSH CCRY574ProMFCDemoDlg::ChangeCtrlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	return NULL;
+}
+
+
 
 HBRUSH CCRY574ProMFCDemoDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
@@ -1466,8 +1621,8 @@ HBRUSH CCRY574ProMFCDemoDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 		}
 	}
 
-
-	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+	HBRUSH hbr;
+	hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
 	return hbr;
 }
 
@@ -1491,8 +1646,9 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 			{
 				if (m_auto_test && !bStopped)
 				{
-					psensor_check_process();
-					m_test_total++;
+					//psensor_check_process();
+					//m_test_total++;
+					OnBnClickedButton4();
 				}
 			}
 		}

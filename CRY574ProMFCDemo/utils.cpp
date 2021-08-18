@@ -14,7 +14,7 @@ const TCHAR *setting_name[TEST_NR] =
 	_T("psensor"),			// 0
 	_T("user_mode"),
 	_T("software_version"),
-	NULL,
+	_T("ep_color"),
 	NULL,
 	NULL,
 	NULL,
@@ -186,4 +186,23 @@ int get_test_item_setting_bitmap()
 	}
 
 	return bitmap;
+}
+
+/*
+ * 获取实际的设置值
+ */
+int get_test_item_setting_value(const TCHAR *pkey)
+{
+	int value = 0;
+
+	if (!get_config_int_value(_T("data"), pkey, &value, 1))
+	{
+		Log_e(_T("Get data(%s) failed, use default value(%d)"), pkey, 1);
+	}
+	else
+	{
+		Log_d(_T("Get data(%s) ok, use value(%d)"), pkey, value);
+	}
+
+	return value;
 }

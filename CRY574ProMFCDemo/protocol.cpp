@@ -293,13 +293,13 @@ void check_psensor_cali_value()
 		prompt.Format(_T("入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准失败！"), near_data, far_data);
 		dlg_update_status_ui(STATE_CALI_VALUE, prompt);
 		dlg_update_status_ui(STATE_FAIL);
-		Log_d(_T("in ear value=0x%04x, out ear value=0x%04x, FAILED."), near_data, far_data);
+		Log_e(_T("bda(%s) in ear value=0x%04x, out ear value=0x%04x, FAILED."), current_bt_device, near_data, far_data);
 		//AfxMessageBox(prompt);
 	}
 	else
 	{
 		prompt.Format(_T("入耳校准值:0X%04X, 出耳校准值：0X%04X, 校准成功！"), near_data, far_data);
-		Log_d(_T("in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), near_data, far_data);
+		Log_d(_T("bda(%s) in ear value=0x%04x, out ear value=0x%04x, SUCCESS."), current_bt_device, near_data, far_data);
 		dlg_update_status_ui(STATE_CALI_VALUE, prompt);
 		dlg_update_status_ui(STATE_SUCCESS);
 	}
@@ -1092,13 +1092,15 @@ UINT thread_process(LPVOID)
 		goto disconn_bt;
 	}
 
+	Log_d(_T("begin to test bda(%s)"), current_bt_device);
+
 	int test_items = get_test_item_setting_bitmap();
 
 	if (test_items & (1 << TEST_PSENSOR_INDEX))
 	{
+		get_psensor_rawdata();			// 先获取psensor raw data.
 		check_psensor_calibrated_2();
-		get_psensor_rawdata();
-		check_psensor_rawdata();
+		//check_psensor_rawdata();
 	}
 	
 	if (test_items & (1 << TEST_SW_VERSION_INDEX))
@@ -1111,6 +1113,11 @@ UINT thread_process(LPVOID)
 		check_tws_mode();		// 最后一个
 	}
 
+	if (test_items & (1 << TEST_EP_COLOR_INDEX))
+	{
+		check_ep_color();
+	}
+
 	if (test_items & (1 << TEST_WRITE_ANC_GAIN_INDEX))
 	{
 	//	write_agent_anc_gain();			// 保险先去掉
@@ -1121,6 +1128,8 @@ UINT thread_process(LPVOID)
 	{
 		send_system_factory_cmd();
 	}
+
+	Log_d(_T("test bda(%s) end."), current_bt_device);
 
 	ret = 0;
 

@@ -181,7 +181,7 @@ static int calculate_low_threshold(psensor_cali_data_t *pdata)
 	int delta;
 
 	delta = pdata->gray_value - pdata->base_value;
-	return pdata->base_value + delta * 7 / 10;
+	return pdata->base_value + delta * 15 / 10;			// 按照耳机源代码
 }
 
 static BOOL check_ep_psensor_rawdata(race_rsp_rawdata_t *prawdata, psensor_cali_data_t *pcalidata)
@@ -237,3 +237,19 @@ BOOL check_psensor_rawdata()
 	return left_result && right_result;
 }
 
+
+
+race_rsp_rawdata_t * get_ep_psensor_rawdata(int channel)
+{
+	if (channel == ONEWIRE_LEFT_CHANNEL)
+	{
+		return &left_rawdata;
+	}
+
+	if (channel == ONEWIRE_RIGHT_CHANNEL)
+	{
+		return &right_rawdata;
+	}
+
+	return NULL;
+}
