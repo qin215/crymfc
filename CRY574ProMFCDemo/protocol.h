@@ -218,8 +218,8 @@ extern "C" {
 #define TWS_PARTNER_ID 0x5
 
 
-#define ONEWIRE_LEFT_CHANNEL				0           // by qin
-#define ONEWIRE_RIGHT_CHANNEL			1
+#define ONEWIRE_LEFT_CHANNEL				LEFT_CHANNEL           // by qin
+#define ONEWIRE_RIGHT_CHANNEL				RIGHT_CHANNEL
 
 
 #define EP_COLOR_BLACK	0X00
@@ -244,6 +244,13 @@ enum
 	TEST_WRITE_ANC_GAIN_INDEX = 8,
 	TEST_FACTORY_RESET_INDEX,		// 恢复出厂设置最后一项
 	TEST_NR
+};
+
+enum
+{
+	TEST_TWS_MODE = 0,			// 测试双耳
+	TEST_LEFT_EP_MODE,			// 测试左耳
+	TEST_RIGHT_EP_MODE			// 测试右耳
 };
 
 
@@ -345,6 +352,10 @@ void check_ep_color();
 int get_test_item_setting_value(const TCHAR *pkey);
 
 race_rsp_rawdata_t * get_ep_psensor_rawdata(int channel);
+
+BOOL check_psensor_left_rawdata();
+
+BOOL check_psensor_right_rawdata();
 
 #ifdef __cplusplus
 }

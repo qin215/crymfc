@@ -237,6 +237,24 @@ BOOL check_psensor_rawdata()
 	return left_result && right_result;
 }
 
+BOOL check_psensor_left_rawdata()
+{
+	BOOL left_result = FALSE;
+	left_result = check_ep_psensor_rawdata(&left_rawdata, &left_cali_data);
+
+	return left_result;
+}
+
+
+BOOL check_psensor_right_rawdata()
+{
+	BOOL right_result = FALSE;
+
+	right_result = check_ep_psensor_rawdata(&right_rawdata, &right_cali_data);
+
+	return right_result;
+}
+
 
 
 race_rsp_rawdata_t * get_ep_psensor_rawdata(int channel)

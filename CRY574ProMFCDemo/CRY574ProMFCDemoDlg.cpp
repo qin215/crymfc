@@ -264,7 +264,7 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	m_test_ok_nr = 0;
 
 
-	m_combox.SetCurSel(0);
+	m_combox.SetCurSel(TEST_TWS_MODE);
 
 	enable_log_file();
 	enable_console_window();
@@ -1033,14 +1033,14 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 
 	enum 
 	{
-		TYPE_TWS,
-		TYPE_LEFT,
-		TYPE_RIGHT
+		TYPE_TWS = TEST_TWS_MODE,
+		TYPE_LEFT = TEST_LEFT_EP_MODE,
+		TYPE_RIGHT = TEST_RIGHT_EP_MODE
 	};
 
 	if (sel >= sizeof(sel_type) / sizeof(TCHAR *))
 	{
-		sel = 0;
+		sel = TEST_TWS_MODE;
 		m_combox.SetCurSel(sel);
 	}
 
@@ -1133,14 +1133,14 @@ BOOL CCRY574ProMFCDemoDlg::UpdateTwsModeData(tws_mode_t *agent, tws_mode_t *part
 
 	enum 
 	{
-		TYPE_TWS,
-		TYPE_LEFT,
-		TYPE_RIGHT
+		TYPE_TWS = TEST_TWS_MODE,
+		TYPE_LEFT = TEST_LEFT_EP_MODE,
+		TYPE_RIGHT = TEST_RIGHT_EP_MODE
 	};
 
 	if (sel >= sizeof(sel_type) / sizeof(TCHAR *))
 	{
-		sel = 0;
+		sel = TYPE_TWS;
 		m_combox.SetCurSel(sel);
 	}
 
@@ -1425,7 +1425,23 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		}
 
 		m_psensor_rawdata.SetForeColor(FONT_BLACK_COLOR);
-		rawdata_ret = check_psensor_rawdata();
+
+
+		int sel = m_combox.GetCurSel();
+
+		if (sel == TEST_TWS_MODE)
+		{
+			rawdata_ret = check_psensor_rawdata();
+		}
+		else if (sel == TEST_LEFT_EP_MODE)		// left
+		{
+			rawdata_ret = check_psensor_left_rawdata();
+		}
+		else  // right
+		{
+			rawdata_ret = check_psensor_right_rawdata();
+		}
+
 		if (rawdata_ret)
 		{
 			m_psensor_rawdata.SetBkColor(RGB(0, 255, 0));
@@ -1541,7 +1557,22 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		right_color = *ptr++;
 
 		int color_value = get_test_item_setting_value(_T("color"));			// 
-		ret = (left_color == right_color) && (left_color == color_value);
+
+		int sel = m_combox.GetCurSel();
+
+		if (sel == TEST_TWS_MODE)
+		{
+			ret = (left_color == color_value) && (right_color == color_value);
+		}
+		else if (sel == TEST_LEFT_EP_MODE)
+		{
+			ret = (left_color == color_value) ;
+		}
+		else
+		{
+			ret = (right_color == color_value);
+		}
+		
 		m_test_array[TEST_EP_COLOR_INDEX] = ret;
 
 		if (left_color == EP_COLOR_BLACK)
