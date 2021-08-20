@@ -357,6 +357,8 @@ BOOL check_psensor_left_rawdata();
 
 BOOL check_psensor_right_rawdata();
 
+void reset_partner_id();
+
 #ifdef __cplusplus
 }
 #endif

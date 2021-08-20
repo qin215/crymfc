@@ -103,7 +103,6 @@ void check_ep_color()
 	}
 
 	ret = send_race_cmd_to_agent(ep_color_cmd, process_ep_color_bindata);
-
 	if (ret == TRUE)
 	{
 		if (ep_side == ONEWIRE_LEFT_CHANNEL)

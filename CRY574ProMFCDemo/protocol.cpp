@@ -549,83 +549,6 @@ tws_mode_t get_agent_mode()
 }
 
 
-UINT32 get_partner_id(CString& strRSP)
-{
-	int nlen = strRSP.GetLength();
-	UCHAR *pbuff;
-	UINT32 ret = 0;
-	int i;
-
-	if (nlen == 0)
-	{
-		Log_e(_T("qin nlen == 0!"));
-		return 0;
-	}
-
-	pbuff = DBG_NEW UCHAR[nlen];
-	if (!pbuff)
-	{
-		bStopped = TRUE;
-		Log_e(_T("qin no memory error!"));
-		PostQuitMessage(0);
-	}
-
-	int binlen = String2HexData(strRSP, pbuff);
-	if (binlen <= 0)
-	{
-		Log_e(_T("origin spp str=%s"), strRSP);
-		goto done;
-	}
-
-	if (pbuff[0] == RACE_CMD_FRAME_START && pbuff[1] == RACE_CMD_RSP)
-	{
-		race_cmd_t *pcmd = (race_cmd_t *)pbuff;
-
-		if (pcmd->frame_cmd != RACE_CMD_GET_PARTNER_ID)
-		{
-			Log_e(_T("race cmd id(%x) is not equal to 0xd000 error"), pcmd->frame_cmd);
-			goto done;
-		}
-		int payload_len = pcmd->frame_len - sizeof(pcmd->frame_cmd);
-		if (payload_len % 2 != 0)
-		{
-			Log_e(_T("race cmd payload len(%d) is not even error"), payload_len);
-			goto done;
-		}
-
-		for (i = 0; i < payload_len; i += 2)
-		{
-			if (pcmd->payload[i] == TWS_PARTNER_ID)
-			{
-				ret = pcmd->payload[ i+ 1];
-				break;
-			}
-		}
-
-		if (i == payload_len)
-		{
-			Log_e(_T("not found TWS partner id error"));
-		}
-		else
-		{
-			Log_d(_T("TWS partner id = 0x%x"), ret);
-		}
-	}
-	else
-	{
-		Log_e(_T("RACE cmd format error"));
-	}
-	
-done:
-	delete pbuff;
-
-	// 删除多余的0
-	strRSP = strRSP.Left(3 * 15);
-	Log_d(_T("recv spp data='%s'"), strRSP);
-
-	return ret;
-}
-
 // 构建从耳race cmd 转发包
 UCHAR * cons_relay_race_cmd(UCHAR id, LPCCH cmd_str)
 {
@@ -1029,6 +952,8 @@ UINT thread_process(LPVOID)
 
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
+
+	reset_partner_id();
 
 	//retcode = CRYBT_ResetDongle();
 	//Log_d(_T("reset dongle retcode=%d"), retcode);
