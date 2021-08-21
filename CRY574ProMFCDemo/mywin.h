@@ -71,6 +71,7 @@ Boolean ensure_directory_exist(LPCTSTR path);
 
 TCHAR* HAL_get_current_dt_filename(void);
 
+void win32_start_thread(AFX_THREADPROC proc, LPVOID param);
 
 #ifdef __cplusplus
 }

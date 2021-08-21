@@ -7,6 +7,7 @@
 #include "afxdialogex.h"
 #include "protocol.h"
 #include "mywin.h"
+#include "uart_cmd.h"
 
 int String2HexData(const CString &in_str, UCHAR * outBuffer);
 
@@ -126,7 +127,8 @@ BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
 	ON_WM_UPDATEUISTATE()
 	ON_BN_CLICKED(IDC_BUTTON_STOP, &CCRY574ProMFCDemoDlg::OnBnClickedButtonStop)
 	ON_MESSAGE(WM_UPDATE_STATUS, &CCRY574ProMFCDemoDlg::OnUpdateStatus)
-	
+	ON_MESSAGE(WM_UART_USER_CMD, &CCRY574ProMFCDemoDlg::OnProcessUartMsg)
+
 	ON_WM_CTLCOLOR()
 	ON_WM_TIMER()
 END_MESSAGE_MAP()
@@ -266,8 +268,30 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 	m_combox.SetCurSel(TEST_TWS_MODE);
 
+	int log_flag = 0;
+	int console_flag = 0;
+	if (!get_config_int_value(_TEXT("debug"), _TEXT("log"), &log_flag, 1))
+	{
+		log_flag = 0;
+	}
+
+	if (!get_config_int_value(_TEXT("debug"), _TEXT("console"), &console_flag, 0))
+	{
+		console_flag = 0;
+	}
+
+	if (console_flag)
+	{
+		enable_console_window();
+	}
+
 	enable_log_file();
-	enable_console_window();
+
+	if (init_uart_buff())
+	{
+		register_uart_rsp_func(ua800_do_with_uart_rsp);
+	}
+
 	SetTimer(AUTOTEST_TIMER_ID, 1000, 0);
 
 	int retcode;
@@ -1701,4 +1725,14 @@ void CCRY574ProMFCDemoDlg::OnTimer(UINT_PTR nIDEvent)
 		m_button_start.EnableWindow(TRUE);
 		m_button_stop.EnableWindow(FALSE);
 	}
+}
+
+LRESULT CCRY574ProMFCDemoDlg::OnProcessUartMsg(WPARAM wParam, LPARAM lParam)
+{
+	if (wParam == UART_USER_CMD_START_TESTING)
+	{
+		OnBnClickedButton4();
+	}
+
+	return 0;
 }

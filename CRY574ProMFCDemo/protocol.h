@@ -5,9 +5,16 @@
 extern "C" {
 #endif
 
+#ifndef uint8_t
 #define uint8_t unsigned char
+#endif
+
+#ifndef uint16_t
 #define uint16_t unsigned short
+#endif
+
 #define kal_uint16 unsigned short
+
 
 #ifndef Boolean
 #define Boolean BOOL
@@ -226,6 +233,8 @@ extern "C" {
 #define EP_COLOR_WHITE	0X01
 
 #define EP_COLOR_INVALID_VALUE -1
+
+#define UART_USER_CMD_START_TESTING		1
 
 enum 
 {

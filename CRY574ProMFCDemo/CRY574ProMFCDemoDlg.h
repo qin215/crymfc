@@ -12,6 +12,7 @@ using namespace std;
 
 #define WM_UPDATE_STATIC (WM_USER + 100)  
 #define WM_UPDATE_STATUS (WM_USER + 101)
+#define WM_UART_USER_CMD (WM_USER + 102)
 
 #define AUTOTEST_TIMER_ID		1
 
@@ -53,6 +54,8 @@ private:
 	void UpdateInfo(CString strInfo);
 	LRESULT OnUpdatePrompt(WPARAM wParam, LPARAM lParam);
 	LRESULT OnUpdateStatus(WPARAM wParam, LPARAM lParam);
+
+	LRESULT OnProcessUartMsg(WPARAM wParam, LPARAM lParam);
 
 	BOOL UpdatePsensorData(psensor_cali_struct *pdata);
 	BOOL UpdateTwsModeData(tws_mode_t *agent, tws_mode_t *partner);

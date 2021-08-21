@@ -115,18 +115,22 @@
     <ClInclude Include="CRY574ProAPIWrapper.h" />
     <ClInclude Include="CRY574ProMFCDemo.h" />
     <ClInclude Include="CRY574ProMFCDemoDlg.h" />
+    <ClInclude Include="data_buff.h" />
     <ClInclude Include="mywin.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="qcloud_iot_export_log.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ServerCmd.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="uart_cmd.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ColorStatic.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="CRY574ProMFCDemo.cpp" />
     <ClCompile Include="CRY574ProMFCDemoDlg.cpp" />
+    <ClCompile Include="data_buff.cpp" />
     <ClCompile Include="HAL_OS_win32.cpp" />
     <ClCompile Include="logfile.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -134,12 +138,15 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="protocol.cpp" />
+    <ClCompile Include="uart.cpp" />
+    <ClCompile Include="uart_obd_test.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="sw_version.cpp" />
     <ClCompile Include="anc_tunning.cpp" />
     <ClCompile Include="system_cmd.cpp" />
     <ClCompile Include="psensor_check.cpp" />
     <ClCompile Include="ep_color.cpp" />
+    <ClCompile Include="uart_protocol.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc" />
