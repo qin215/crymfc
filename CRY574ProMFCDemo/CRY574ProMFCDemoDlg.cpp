@@ -63,6 +63,7 @@ CCRY574ProMFCDemoDlg::CCRY574ProMFCDemoDlg(CWnd* pParent /*=NULL*/)
 
 	m_test_total = 0;
 	m_test_ok_nr = 0;
+	m_bUartOpen = FALSE;
 }
 
 void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
@@ -289,6 +290,7 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 	if (init_uart_buff())
 	{
+		m_bUartOpen = TRUE;
 		register_uart_rsp_func(ua800_do_with_uart_rsp);
 	}
 
@@ -440,6 +442,10 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 	CRYBT_Release();
 
 	close_logfile();
+	if (m_bUartOpen)
+	{
+		win32_UART_Close(HX_WIN32_UART_PORT);
+	}
 }
 
 

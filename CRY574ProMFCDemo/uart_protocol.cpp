@@ -59,7 +59,7 @@ int process_data_buffer(kal_uint8 *pbuff, int len)
 
 
 /*
- * 更新主线程中的UI显示
+ * 发送串口指令到UI线程
  */
 void dlg_send_uart_msg_to_ui(int cmd)
 {

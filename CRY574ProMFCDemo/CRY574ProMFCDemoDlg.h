@@ -105,6 +105,8 @@ private:
 	int m_test_array[TEST_NR];
 	int m_test_bitmap;
 
+	BOOL m_bUartOpen;
+
 public:
 	afx_msg void OnBnClickedButtonInquiry1();
 	afx_msg void OnBnClickedButtonInquiry2();

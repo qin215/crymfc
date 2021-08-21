@@ -22,6 +22,7 @@ static HANDLE hWriteEvent;
 static OVERLAPPED com_ov_ex[MAX_PORT_NUM];
 static HANDLE hWriteEvent_ex[MAX_PORT_NUM];
 buf_t g_uart_rx_buff[MAX_PORT_NUM];
+static BOOL bUartStatus[MAX_PORT_NUM];
 
 static Boolean m_bUartThreadExit = FALSE; //add by cbk 20180829
 //static int m_port = 0;//add by cbk 20180829
@@ -47,6 +48,7 @@ Boolean init_uart_buff()
 #ifdef WIN32
 	if ((ret = win32_UART_Open(HX_WIN32_UART_PORT)))
 	{
+		bUartStatus[HX_WIN32_UART_PORT] = TRUE;
 		win32_start_thread(win32_uart_recv_thread, NULL);
 
 		return TRUE;
@@ -363,6 +365,11 @@ UINT win32_uart_recv_thread(LPVOID pParam)
 
 	for (;;)
 	{
+		if (!bUartStatus[HX_WIN32_UART_PORT])
+		{
+			break;
+		}
+
 		bResult = WaitCommEvent(UARTHandle[HX_WIN32_UART_PORT], &dwEvtMask, &com_ov);// 等待串口通信事件的发生
 
 		if (!bResult)
@@ -670,6 +677,7 @@ kal_uint16 win32_UART_GetBytes(int port, kal_uint8 *Buffaddr, kal_uint16 Length,
 
 void win32_UART_Close(int port)
 {
+	bUartStatus[HX_WIN32_UART_PORT] = FALSE;
     CloseHandle(UARTHandle[port]);
 }
 
@@ -677,6 +685,7 @@ void win32_UART_Close(int port)
 void win32_UART_Close_Ex(int port)
 {
     //CloseHandle(UARTHandle[port]);
+	bUartStatus[HX_WIN32_UART_PORT] = FALSE;
 	m_bUartThreadExit = TRUE;
 	//win32_stop_thread();
 	if (UARTHandle[port])
