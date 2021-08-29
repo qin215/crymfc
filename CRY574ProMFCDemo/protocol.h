@@ -236,6 +236,8 @@ extern "C" {
 
 #define UART_USER_CMD_START_TESTING		1
 
+#define OPEN_BOX	1
+
 enum 
 {
 	TWS_USER_MODE = 0,		// 用户模式
@@ -367,6 +369,8 @@ BOOL check_psensor_left_rawdata();
 BOOL check_psensor_right_rawdata();
 
 void reset_partner_id();
+
+Boolean t5506_send_uart_cmd(kal_uint16 racecmd);
 
 #ifdef __cplusplus
 }

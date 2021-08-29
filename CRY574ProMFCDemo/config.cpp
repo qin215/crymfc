@@ -122,3 +122,73 @@ TCHAR* get_program_path(TCHAR *out_buf, int len)
 	
 	return &out_buf[n];
 }
+
+
+
+/* 
+ * 获取 uart.ini 中, 某个段中的 key 对应的 integer 值
+ */
+FUNC_DLL_EXPORT Boolean get_config_int_value_v2(const TCHAR *filename, const TCHAR *segment, const TCHAR *key, int *pvalue, int default_value)
+{
+	HMODULE  hHandle;
+	TCHAR lpszPath[MAX_PATH];
+	DWORD count;
+	LPTSTR ptr;
+
+	hHandle = GetModuleHandle(NULL);
+	if (!hHandle)
+	{
+		return FALSE;
+	}
+
+	count = GetModuleFileName(hHandle, lpszPath, MAX_PATH);
+	if (count == 0)
+	{
+		return FALSE;
+	}
+
+	ptr = _tcsrchr(lpszPath, '\\');
+	if (!ptr)
+	{
+		return FALSE;
+	}
+
+	_tcscpy(ptr + 1, filename);
+
+	*pvalue = GetPrivateProfileInt(segment, key, default_value, lpszPath);
+
+	return TRUE;
+}
+
+
+FUNC_DLL_EXPORT Boolean set_config_int_value_v2(const TCHAR *filename, const TCHAR *segment, const TCHAR *key, int *pvalue, int default_value)
+{
+	HMODULE  hHandle;
+	TCHAR lpszPath[MAX_PATH];
+	DWORD count;
+	LPTSTR ptr;
+
+	hHandle = GetModuleHandle(NULL);
+	if (!hHandle)
+	{
+		return FALSE;
+	}
+
+	count = GetModuleFileName(hHandle, lpszPath, MAX_PATH);
+	if (count == 0)
+	{
+		return FALSE;
+	}
+
+	ptr = _tcsrchr(lpszPath, '\\');
+	if (!ptr)
+	{
+		return FALSE;
+	}
+
+	_tcscpy(ptr + 1, filename);
+
+	*pvalue = GetPrivateProfileInt(segment, key, default_value, lpszPath);
+
+	return TRUE;
+}

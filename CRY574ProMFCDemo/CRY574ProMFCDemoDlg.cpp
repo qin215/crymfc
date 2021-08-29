@@ -263,9 +263,25 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 	m_auto_test = FALSE;
 
-	m_test_total = 0;
-	m_test_ok_nr = 0;
+	CFileException e;
+	CFile file;
+	if (file.Open(_T("result.dat"), CFile::modeRead, &e))
+	{
+		CArchive ar(&file, CArchive::load);
 
+		m_result.Serialize(ar);
+
+		m_test_ok_nr = m_result.m_ok_count;
+		m_test_total = m_result.m_ok_count + m_result.m_failed_count;
+
+		ar.Close();
+		file.Close();
+	} 
+	else 
+	{
+		m_test_total = 0;
+		m_test_ok_nr = 0;
+	}
 
 	m_combox.SetCurSel(TEST_TWS_MODE);
 
@@ -446,6 +462,25 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 	{
 		win32_UART_Close(HX_WIN32_UART_PORT);
 	}
+
+
+	CFile file;
+	if (file.Open(_T("result.dat"), CFile::modeCreate | CFile::modeWrite))
+	{
+		CArchive ar(&file, CArchive::store);
+
+		m_result = CTestResult(m_test_ok_nr, m_test_total - m_test_ok_nr);
+		m_result.Serialize(ar);
+
+		ar.Flush();
+		ar.Close();
+		file.Close();
+	}
+	else
+	{
+		Log_e(_T("store test result failed."));
+	}
+
 }
 
 
@@ -1108,7 +1143,7 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 		pWndStatus->SetWindowText(strInfo);
 		CString prompt;
 
-		if ((pdata->gray_value < pdata->gray_value) || (pdata->gray_value - pdata->base_value <= 0x100))
+		if ((pdata->base_value > pdata->gray_value) || (pdata->gray_value - pdata->base_value < 0x100))
 		{
 			prompt.Format(_T("入耳校准值:%d(%X), 出耳校准值:%d(%X), 校准失败！"), pdata->gray_value, pdata->gray_value , pdata->base_value, pdata->base_value);
 			Log_d(_T("bda(%s) %s in ear value=0x%04x, out ear value=0x%04x, FAILED."), current_bt_device, strEnSide, pdata->gray_value , pdata->base_value);

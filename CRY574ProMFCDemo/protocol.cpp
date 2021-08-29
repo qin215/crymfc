@@ -1090,6 +1090,8 @@ disconn_bt:
 	dlg_update_ui(_T("done!"));
 	dlg_update_status_ui(STATE_DONE);
 
+	t5506_send_uart_cmd(OPEN_BOX);
+
 	bRunning = FALSE;
 	return ret;
 }

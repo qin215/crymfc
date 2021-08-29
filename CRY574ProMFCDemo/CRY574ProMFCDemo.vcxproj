@@ -111,6 +111,7 @@
     <None Include="res\CRY574ProMFCDemo.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cJSON.h" />
     <ClInclude Include="ColorStatic.h" />
     <ClInclude Include="CRY574ProAPIWrapper.h" />
     <ClInclude Include="CRY574ProMFCDemo.h" />
@@ -123,6 +124,7 @@
     <ClInclude Include="ServerCmd.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TestResult.h" />
     <ClInclude Include="uart_cmd.h" />
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +140,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="protocol.cpp" />
+    <ClCompile Include="TestResult.cpp" />
     <ClCompile Include="uart.cpp" />
     <ClCompile Include="uart_obd_test.cpp" />
     <ClCompile Include="utils.cpp" />

@@ -7,6 +7,7 @@
 #include "afxwin.h"
 #include "protocol.h"
 #include "ColorStatic.h"
+#include "TestResult.h"
 using namespace std;
 
 
@@ -91,6 +92,8 @@ private:
 	INT m_test_ok_nr;
 
 	CString m_default_sw_version;
+
+	CTestResult m_result;
 
 	/*
 	enum 
