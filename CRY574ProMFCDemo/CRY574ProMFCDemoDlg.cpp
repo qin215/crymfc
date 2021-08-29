@@ -63,6 +63,10 @@ CCRY574ProMFCDemoDlg::CCRY574ProMFCDemoDlg(CWnd* pParent /*=NULL*/)
 
 	m_test_total = 0;
 	m_test_ok_nr = 0;
+
+	m_all_count = 0;
+	m_all_ok_count = 0;
+
 	m_bUartOpen = FALSE;
 }
 
@@ -96,6 +100,10 @@ void CCRY574ProMFCDemoDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_STATIC_RAWDATA, m_psensor_rawdata);
 
 	DDX_Control(pDX, IDC_STATIC_SW_VERSION, m_sw_version);
+
+
+	DDX_Text(pDX, IDC_STATIC_ALL_CNT, m_all_count);
+	DDX_Text(pDX, IDC_STATIC_ALL_OK_CNT, m_all_ok_count);
 }
 
 BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
@@ -132,6 +140,7 @@ BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
 
 	ON_WM_CTLCOLOR()
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BUTTON5, &CCRY574ProMFCDemoDlg::OnBnClickedButton5)
 END_MESSAGE_MAP()
 
 
@@ -262,17 +271,42 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	//::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
 
 	m_auto_test = FALSE;
+	m_cycle_nr = 0;
 
-	CFileException e;
+	//CFileException e;
 	CFile file;
-	if (file.Open(_T("result.dat"), CFile::modeRead, &e))
+	if (file.Open(_T("result.dat"), CFile::modeRead, NULL))
 	{
 		CArchive ar(&file, CArchive::load);
 
-		m_result.Serialize(ar);
+		try
+		{
+			m_result.Serialize(ar);
+			m_test_ok_nr = m_result.m_ok_count;
+			m_test_total = m_result.m_ok_count + m_result.m_failed_count;
 
-		m_test_ok_nr = m_result.m_ok_count;
-		m_test_total = m_result.m_ok_count + m_result.m_failed_count;
+			m_all_ok_count = m_result.m_total_ok_count;
+			m_all_count = m_result.m_total_ok_count + m_result.m_total_failed_count;
+			
+		}
+		catch (CMemoryException* e)
+		{
+			
+		}
+		catch (CFileException* e)
+		{
+			m_test_ok_nr = 0;
+			m_test_total = 0;
+			m_all_count = 0;
+			m_all_ok_count = 0;
+		}
+		catch (CException* e)
+		{
+			m_test_ok_nr = 0;
+			m_test_total = 0;
+			m_all_count = 0;
+			m_all_ok_count = 0;
+		}
 
 		ar.Close();
 		file.Close();
@@ -281,6 +315,9 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	{
 		m_test_total = 0;
 		m_test_ok_nr = 0;
+
+		m_all_count = 0;
+		m_all_ok_count = 0;
 	}
 
 	m_combox.SetCurSel(TEST_TWS_MODE);
@@ -463,13 +500,19 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 		win32_UART_Close(HX_WIN32_UART_PORT);
 	}
 
+	SaveResultToFile();
+}
 
+
+void CCRY574ProMFCDemoDlg::SaveResultToFile()
+{
 	CFile file;
-	if (file.Open(_T("result.dat"), CFile::modeCreate | CFile::modeWrite))
+
+	if (file.Open(_T("result.dat"), CFile::modeCreate | CFile::modeReadWrite))
 	{
 		CArchive ar(&file, CArchive::store);
 
-		m_result = CTestResult(m_test_ok_nr, m_test_total - m_test_ok_nr);
+		m_result = CTestResult(m_test_ok_nr, m_test_total - m_test_ok_nr, m_all_ok_count, m_all_count - m_all_ok_count);
 		m_result.Serialize(ar);
 
 		ar.Flush();
@@ -480,9 +523,7 @@ void CCRY574ProMFCDemoDlg::OnDestroy()
 	{
 		Log_e(_T("store test result failed."));
 	}
-
 }
-
 
 
 
@@ -1055,6 +1096,15 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton4()
 	bStopped = FALSE;
 	psensor_check_process();
 	m_test_total++;
+	m_all_count++;
+	m_cycle_nr++;
+
+	if (m_cycle_nr >= 10)
+	{
+		m_cycle_nr = 0;
+
+		SaveResultToFile();
+	}
 
 }
 
@@ -1398,6 +1448,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 	{
 		m_edit_status.SetWindowText(_T("成功"));
 		m_test_ok_nr++;
+		m_all_ok_count++;
 		UpdateData(FALSE);
 	}
 	else if (m_state == STATE_FAIL)
@@ -1776,4 +1827,15 @@ LRESULT CCRY574ProMFCDemoDlg::OnProcessUartMsg(WPARAM wParam, LPARAM lParam)
 	}
 
 	return 0;
+}
+
+
+void CCRY574ProMFCDemoDlg::OnBnClickedButton5()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_test_total = 0;
+	m_test_ok_nr = 0;
+
+	SaveResultToFile();
+	UpdateData(FALSE);
 }

@@ -91,9 +91,14 @@ private:
 	INT m_test_total;
 	INT m_test_ok_nr;
 
+	INT m_all_count;
+	INT m_all_ok_count;
+
 	CString m_default_sw_version;
 
 	CTestResult m_result;
+
+	int m_cycle_nr;			// 测试10条记录更新一下记录
 
 	/*
 	enum 
@@ -146,4 +151,7 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 
 	HBRUSH ChangeCtrlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+
+	void SaveResultToFile();
+	afx_msg void OnBnClickedButton5();
 };
