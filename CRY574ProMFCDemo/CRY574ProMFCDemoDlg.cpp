@@ -1193,7 +1193,7 @@ BOOL CCRY574ProMFCDemoDlg::UpdatePsensorData(psensor_cali_struct *pdata)
 		pWndStatus->SetWindowText(strInfo);
 		CString prompt;
 
-		if ((pdata->base_value > pdata->gray_value) || (pdata->gray_value - pdata->base_value < 0x100))
+		if ((pdata->base_value > pdata->gray_value) || (pdata->gray_value - pdata->base_value < 0xB0))
 		{
 			prompt.Format(_T("入耳校准值:%d(%X), 出耳校准值:%d(%X), 校准失败！"), pdata->gray_value, pdata->gray_value , pdata->base_value, pdata->base_value);
 			Log_d(_T("bda(%s) %s in ear value=0x%04x, out ear value=0x%04x, FAILED."), current_bt_device, strEnSide, pdata->gray_value , pdata->base_value);

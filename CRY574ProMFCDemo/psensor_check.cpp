@@ -181,7 +181,7 @@ static int calculate_low_threshold(psensor_cali_data_t *pdata)
 	int delta;
 
 	delta = pdata->gray_value - pdata->base_value;
-	return pdata->base_value + delta * 15 / 10;			// 按照耳机源代码
+	return pdata->base_value + delta * 20 / 10;			// 按照耳机源代码
 }
 
 static BOOL check_ep_psensor_rawdata(race_rsp_rawdata_t *prawdata, psensor_cali_data_t *pcalidata)
