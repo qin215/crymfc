@@ -52,6 +52,8 @@ BOOL parse_race_cmd_rsp_help(CString& strRSP, race_cmd_rsp_callback_func callbac
 	
 		uint16_t len = pFrame->len;
 		len += 4;			// added length & header & type
+
+#if 0
 		if (len <= binlen)
 		{
 			valid = TRUE;
@@ -62,6 +64,7 @@ BOOL parse_race_cmd_rsp_help(CString& strRSP, race_cmd_rsp_callback_func callbac
 			Log_e(_T("qin spp format error, raw data=%s"), strRSP);
 			goto done;
 		}
+#endif
 
 		race_cmd_t *pcmd = (race_cmd_t *)pFrame;
 		ret = callback(pcmd, len, &side);

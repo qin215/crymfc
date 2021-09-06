@@ -20,7 +20,6 @@ CString current_bt_name(_T("Philips TAT5506"));
 
 tws_mode_t get_agent_mode();
 tws_mode_t get_partner_mode();
-onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *pindex);
 
 UINT32 parse_race_cmd_rsp(race_cmd_t *pdata, int data_len, int *pside)
 {
@@ -104,7 +103,7 @@ BOOL connect_bt_device(const CString& device)
 
 	for (int i = 0;i<len;i++)
 	{
-		pcMac[i] = device[i];
+		pcMac[i] = device[i] & 0xff;
 	}
 	pcMac[len] = '\0';
 
@@ -169,7 +168,7 @@ BOOL connect_bt_spp(const CString& device)
 
 	for (int i = 0;i<len;i++)
 	{
-		pcMac[i] = device[i];
+		pcMac[i] = device[i] & 0xff;
 	}
 	pcMac[len] = '\0';
 
@@ -392,6 +391,8 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 
 		uint16_t len = pFrame->len;
 		len += 4;			// added length & header & type
+
+#if 0
 		if (len <= binlen)
 		{
 			valid = TRUE;
@@ -403,6 +404,7 @@ BOOL parse_spp_rsp_data_2(CString& strRSP, psensor_cali_data_t *left_earphone,
 			Log_e(_T("qin spp format error, raw data=%s"), strRSP);
 			goto done;
 		}
+#endif
 	
 		if (pFrame->param[0] == 0)
 		{
@@ -895,6 +897,8 @@ onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * prot
 			memset(protocol_buffer, 0, sizeof(protocol_buffer));
 			buffer_index = 0;
 		}
+
+		*plen = buffer_index;
 
 		return NULL;
 	}

@@ -33,8 +33,8 @@ void ua800_do_with_uart_rsp(buf_t *b)
 int process_data_buffer(kal_uint8 *pbuff, int len)
 {
 	int nlen = len;
-	kal_uint8 *tmp;
-	kal_uint8 *p;
+//	kal_uint8 *tmp;
+//	kal_uint8 *p;
 	int count = 0;
 	int i;
 
@@ -93,7 +93,7 @@ Boolean t5506_send_uart_cmd(kal_uint16 racecmd)
 {
 	buf_t *b;
 	int i;
-	DWORD dwWait;
+//	DWORD dwWait;
 	BOOL ret = FALSE;
 
 

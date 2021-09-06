@@ -88,6 +88,8 @@ TCHAR* parse_sw_version_rsp(CString& strRSP)
 	
 		uint16_t len = pFrame->len;
 		len += 4;			// added length & header & type
+
+#if 0
 		if (len <= binlen)
 		{
 			valid = TRUE;
@@ -98,6 +100,7 @@ TCHAR* parse_sw_version_rsp(CString& strRSP)
 			Log_e(_T("qin spp format error, raw data=%s"), strRSP);
 			goto done;
 		}
+#endif
 
 		race_cmd_t *pcmd = (race_cmd_t *)pFrame;
 		pVersion = (TCHAR *)process_sw_version_bindata(pcmd, len, NULL);

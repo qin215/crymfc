@@ -338,12 +338,12 @@ void send_uart()
 
 UINT win32_uart_recv_thread(LPVOID pParam)
 {
-	int status;
-	int len;
-	fm_packet_t *pack;
+//	int status;
+//	int len;
+//	fm_packet_t *pack;
 	DWORD dwEvtMask = 0;
 	DWORD dwErrorFlags;
-	COMSTAT ComStat;
+//	COMSTAT ComStat;
 	BOOL bResult;
 	unsigned char temp_buf[BUF_SIZE] = {0};
 
@@ -410,8 +410,8 @@ UINT win32_uart_recv_thread(LPVOID pParam)
 			COMSTAT ComStat ;
 			DWORD dwLength;
 			DWORD dwError = 0;
-			int error;
-			fm_packet_t *pack;
+//			int error;
+//			fm_packet_t *pack;
 
 			ClearCommError(UARTHandle[HX_WIN32_UART_PORT], &dwErrorFlags, &ComStat);
 
@@ -446,7 +446,7 @@ UINT win32_uart_recv_thread(LPVOID pParam)
 					continue;
 				}
 
-				uart_rx_buff.len += dwBytesRead;
+				uart_rx_buff.len += (short)dwBytesRead;
 				Log_d(_T("==========\r\nuart read len = %d\n"), uart_rx_buff.len);
 				uart_rx_buff.pbuff[uart_rx_buff.len] = '\0';
 				//print_buffer(&uart_rx_buff);
@@ -527,12 +527,12 @@ pParam:传入指定串口号，表明接收此串口的数据
 /************************************************************************/
 UINT win32_uart_recv_thread_ex(LPVOID pParam)
 {
-	int status;
-	int len;
-	fm_packet_t *pack;
+//	int status;
+//	int len;
+//	fm_packet_t *pack;
 	DWORD dwEvtMask = 0;
 	DWORD dwErrorFlags;
-	COMSTAT ComStat;
+//	COMSTAT ComStat;
 	BOOL bResult;
 	unsigned char temp_buf[BUF_SIZE] = {0};
 	int port = *(int *)pParam;
@@ -582,9 +582,9 @@ UINT win32_uart_recv_thread_ex(LPVOID pParam)
 		{ // 缓冲区中有数据到达
 			COMSTAT ComStat ;
 			DWORD dwLength;
-			DWORD dwError;
-			int error;
-			fm_packet_t *pack;
+//			DWORD dwError;
+//			int error;
+//			fm_packet_t *pack;
 			buf_t *ptr = &g_uart_rx_buff[port];
 
 			ClearCommError(UARTHandle[port], &dwErrorFlags, &ComStat);
@@ -613,10 +613,10 @@ UINT win32_uart_recv_thread_ex(LPVOID pParam)
 					}
 				}
 
-				if (dwBytesRead < (BUF_SIZE - ptr->len))
+				if ((short)dwBytesRead < (BUF_SIZE - ptr->len))
 				{
 					memcpy(ptr->pbuff + ptr->len, temp_buf, dwBytesRead);
-					ptr->len += dwBytesRead;
+					ptr->len += (short)dwBytesRead;
 				}
 
 				Log_d(_T("==========\r\nuart read len = %d\n"), ptr->len);
@@ -881,20 +881,20 @@ kal_bool win32_UART_Open(int port)
 	COMMTIMEOUTS timeouts;
 	int baudrate = CBR_38400;
 	int flowCtrl = 0;  //0:none, 1:hw , 2:sw flow control
-	TCHAR path[1024];
+//	TCHAR path[1024];
 	TCHAR tempbuf[1024];
-	TCHAR *name;	
-	int len;
+//	TCHAR *name;	
+//	int len;
 
 #if 1
-	_stprintf(strbuf, _T("UART%d"), port);
+	_stprintf_s(strbuf, _T("UART%d"), port);
 	
 	if (!get_config_string_value(strbuf, _TEXT("COM_PORT"), _TEXT("COM1"), tempbuf, sizeof(tempbuf)))
 	{
-		_tcscpy(tempbuf, _T("COM1"));
+		_tcscpy_s(tempbuf, _T("COM1"));
 	}
 
-	_stprintf(destbuf, _T("\\\\.\\%s"), tempbuf);
+	_stprintf_s(destbuf, _T("\\\\.\\%s"), tempbuf);
 
 	if (!get_config_int_value(strbuf, _TEXT("flowcontrol"), &flowCtrl, 0))
 	{
@@ -1007,7 +1007,7 @@ kal_bool win32_UART_Open(int port)
 
 	FillMemory(&dcb, sizeof(dcb), 0);
 	dcb.DCBlength = sizeof(dcb);
-	_stprintf(tempbuf, _T("%d,N,8,1"), baudrate);
+	_stprintf_s(tempbuf, _T("%d,N,8,1"), baudrate);
 	if (!BuildCommDCB(tempbuf, &dcb)) 
 	{   
 	  // Couldn't build the DCB. Usually a problem
@@ -1093,20 +1093,20 @@ kal_bool win32_UART_Open_ex(int port)
 	COMMTIMEOUTS timeouts;
 	int baudrate = CBR_38400;
 	int flowCtrl = 0;  //0:none, 1:hw , 2:sw flow control
-	TCHAR path[1024];
+//	TCHAR path[1024];
 	TCHAR tempbuf[1024];
-	TCHAR *name;	
-	int len;
+//	TCHAR *name;	
+//	int len;
 
 	memset(destbuf, 0, sizeof(destbuf));
-	_stprintf(destbuf, _T("\\\\.\\COM%d"), port);
+	_stprintf_s(destbuf, _T("\\\\.\\COM%d"), port);
 	flowCtrl = 0;
 	baudrate = CBR_9600;
 
-	_stprintf(strbuf, _T("UART%d"), 2);
+	_stprintf_s(strbuf, _T("UART%d"), 2);
 	if (!get_config_string_value(strbuf, _TEXT("COM_PORT"), _TEXT("COM1"), tempbuf, sizeof(tempbuf)))
 	{
-		_tcscpy(tempbuf, _T("COM1"));
+		_tcscpy_s(tempbuf, _T("COM1"));
 	}
 
 	if (!get_config_int_value(strbuf, _TEXT("baud_rate"), &baudrate, CBR_9600))
@@ -1115,7 +1115,7 @@ kal_bool win32_UART_Open_ex(int port)
 	}
 
 	hCom = CreateFile(destbuf,
-		GENERIC_READ /*| GENERIC_WRITE*/,
+		GENERIC_READ | GENERIC_WRITE,
 		0,    // must be opened with exclusive-access
 		NULL, // no security attributes
 		OPEN_EXISTING, // must use OPEN_EXISTING
@@ -1135,7 +1135,7 @@ kal_bool win32_UART_Open_ex(int port)
 
 	FillMemory(&dcb, sizeof(dcb), 0);
 	dcb.DCBlength = sizeof(dcb);
-	_stprintf(tempbuf, _T("%d,N,8,1"), baudrate);
+	_stprintf_s(tempbuf, _T("%d,N,8,1"), baudrate);
 	if (!BuildCommDCB(tempbuf, &dcb)) 
 	{   
 		// Couldn't build the DCB. Usually a problem
@@ -1216,6 +1216,8 @@ kal_bool win32_clear_uart_data(int port)
 	{
 		Log_d(_T("Purge comm error!"));
 	}
+
+	return TRUE;
 }
 
 
@@ -1228,11 +1230,14 @@ U8 get_local_mac(U8 *mac, U8 len)
 	{
         Log_d(_T("over local mac len: (%d), please check\n"), len);
         status = -1;
-    } else if (len < 6) 
-   {
+    } 
+	else if (len < 6) 
+    {
         Log_d(_T("less local mac len: (%d), please check\n"), len);
         status = -1;
-    } else {
+    } 
+	else
+	{
         memcpy(mac, local_mac, 6);
     }
 	

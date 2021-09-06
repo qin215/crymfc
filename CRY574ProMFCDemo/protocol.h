@@ -317,6 +317,12 @@ void check_tws_mode();
 
 /*
  * buffer中找到关键字所表示的帧数据
+ * ID1: 起始帧字节
+ * ID2: 第二个字节
+ * protocol_buffer: 输入缓冲区
+ * *plen:
+ *		传入：buffer长度
+ *		传出：剩余buffer长度
  */
 onewire_frame_t * onewire_get_one_rsp_frame(BYTE id1, BYTE id2, kal_uint8 * protocol_buffer, int *plen);
 
