@@ -266,7 +266,7 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 	font.CreatePointFont(300, _T("新宋体"));
 	m_edit_status.SetFont(&font);//设置字体
 
-	m_edit_status.SetWindowTextW(_T("测试中...."));
+	m_edit_status.SetWindowText(_T("测试中...."));
 
 	//::EnableMenuItem(::GetSystemMenu(this->m_hWnd, false), SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);//forbid close
 
@@ -1732,6 +1732,16 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		}
 	
 		delete tmp;
+	}
+	else if (m_state == STATE_PSENSOR_CALIBRATE_DONE)
+	{
+		int result = (int)lParam;
+
+		m_test_array[TEST_PSENSOR_CALI_INDEX] = result;
+	}
+	else if (m_state >= STATE_PSENSOR_SEND_CALIBRATE_OUT_EAR && m_state <=  STATE_PSENSOR_QUERY_CALIBRATE_IN_EAR)
+	{
+		m_edit_status.SetWindowText(CString(pStr));
 	}
 
 	return 0;

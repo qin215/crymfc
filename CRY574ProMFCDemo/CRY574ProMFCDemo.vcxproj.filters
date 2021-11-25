@@ -131,6 +131,9 @@
     <ClCompile Include="TestResult.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="psensor_cali.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CRY574ProMFCDemo.rc">

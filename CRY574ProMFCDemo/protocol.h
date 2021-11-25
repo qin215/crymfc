@@ -35,7 +35,12 @@ extern "C" {
 		STATE_TWS_MODE_DATA,
 		STATE_TWS_VERSION_DATA,
 		STATE_TWS_EP_COLOR,
-		STATE_TWS_RAW_DATA
+		STATE_TWS_RAW_DATA,
+		STATE_PSENSOR_SEND_CALIBRATE_OUT_EAR,		// psensor calibrate
+		STATE_PSENSOR_QUERY_CALIBRATE_OUT_EAR,		// 
+		STATE_PSENSOR_SEND_CALIBRATE_IN_EAR,
+		STATE_PSENSOR_QUERY_CALIBRATE_IN_EAR,		// psensor calibrate
+		STATE_PSENSOR_CALIBRATE_DONE,
 	};
 
 	enum 
@@ -238,6 +243,11 @@ extern "C" {
 
 #define OPEN_BOX	1
 
+
+#define PSENSOR_QUERY_CALI_FAIL 0
+#define PSENSOR_QUERY_CALI_SUCCESS 1
+#define PSENSOR_QUERY_CALI_DOING 2
+
 enum 
 {
 	TWS_USER_MODE = 0,		// 用户模式
@@ -251,6 +261,7 @@ enum
 	TEST_USER_MODE_INDEX,
 	TEST_SW_VERSION_INDEX,
 	TEST_EP_COLOR_INDEX,
+	TEST_PSENSOR_CALI_INDEX,		// psensor 校准
 	TEST_UI_SHOW_NR = 8,			// 0~7 进行UI显示
 	TEST_WRITE_ANC_GAIN_INDEX = 8,
 	TEST_FACTORY_RESET_INDEX,		// 恢复出厂设置最后一项
@@ -377,6 +388,18 @@ BOOL check_psensor_right_rawdata();
 void reset_partner_id();
 
 Boolean t5506_send_uart_cmd(kal_uint16 racecmd);
+
+// 获取校准状态
+BOOL check_psensor_calibrate_status();
+
+// 发送出入耳校准指令
+int send_psensor_calibrate_cmd(int cmd);
+
+BOOL process_psensor_calibrate();
+
+int str2bindata(const char *str, char * outBuffer, int buf_len);
+
+void test0();
 
 #ifdef __cplusplus
 }

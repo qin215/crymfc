@@ -957,6 +957,8 @@ UINT thread_process(LPVOID)
 	dlg_update_status_ui(STATE_PROCESS);
 	bRunning = TRUE;
 
+	test0();
+
 	reset_partner_id();
 
 	//retcode = CRYBT_ResetDongle();
@@ -1058,11 +1060,14 @@ UINT thread_process(LPVOID)
 		send_system_factory_cmd();
 	}
 
+	if (test_items & (1 << TEST_PSENSOR_CALI_INDEX))
+	{
+		process_psensor_calibrate();
+	}
+
 	Log_d(_T("test bda(%s) end."), current_bt_device);
 
 	ret = 0;
-
-
 	if ((retcode = CRYBT_DisConnectSPP()) == API_OK)
 	{
 		info.Format(_T("Disconnect SPP"));
