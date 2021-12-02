@@ -10,7 +10,7 @@
 #include "GPIB.h"
 
 #include "include/visa.h"
-#pragma comment(lib, "msc/visa32.lib")
+#pragma comment(lib, "visa32.lib")
 
 static ViSession m_ViSessionRM;
 static ViSession m_ViSession;
@@ -34,6 +34,7 @@ BOOL GPIBOpenDevice()
 		return TRUE;
 	}
 
+#if 1
     viOpenDefaultRM(&m_ViSessionRM);
 
     if (VI_SUCCESS == viOpen(m_ViSessionRM, "GPIB0::6::INSTR", VI_NULL, VI_NULL, &m_ViSession))
@@ -63,6 +64,9 @@ BOOL GPIBOpenDevice()
 
 		return FALSE;
     }
+#else
+	return FALSE;
+#endif
 }
 
 /*
@@ -142,6 +146,7 @@ static void send_vi_cmd(const char *str_cmd)
 	ViStatus status = 0;
 	ViUInt32 retlen = 0;
 
+#if 1
 	status = viWrite(m_ViSession, (ViByte *)str_cmd, (ViUInt32)strlen(str_cmd), &retlen);
 	if (status < VI_SUCCESS)
 	{
@@ -152,6 +157,7 @@ static void send_vi_cmd(const char *str_cmd)
 	{
 		printf("viWrite ok\n");
 	}
+#endif
 }
 
 
@@ -163,6 +169,8 @@ void GPIBCloseDevice()
 	}
 
 	m_IsConnected = false;
+#if 1
 	viClose(m_ViSession);
 	viClose(m_ViSessionRM);
+#endif
 }

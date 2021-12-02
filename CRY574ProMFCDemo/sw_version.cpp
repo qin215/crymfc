@@ -81,26 +81,13 @@ TCHAR* parse_sw_version_rsp(CString& strRSP)
 		goto done;				// 返回值错误，进行重发
 	}
 
-	onewire_frame_t *pFrame = onewire_get_one_rsp_frame(RACE_CMD_FRAME_START, RACE_CMD_RELAY_RSP, pbuff, &binlen);
+	onewire_frame_t *pFrame = onewire_get_one_rsp_frame(RACE_CMD_FRAME_START, RACE_CMD_RSP, pbuff, &binlen);
 	if (pFrame)
 	{
 		BOOL valid = FALSE;
 	
 		uint16_t len = pFrame->len;
 		len += 4;			// added length & header & type
-
-#if 0
-		if (len <= binlen)
-		{
-			valid = TRUE;
-		}
-
-		if (!valid)
-		{
-			Log_e(_T("qin spp format error, raw data=%s"), strRSP);
-			goto done;
-		}
-#endif
 
 		race_cmd_t *pcmd = (race_cmd_t *)pFrame;
 		pVersion = (TCHAR *)process_sw_version_bindata(pcmd, len, NULL);
@@ -170,8 +157,6 @@ TCHAR * get_partner_sw_version()
 void check_software_version()
 {
 	TCHAR *pAgentVersion = get_agent_sw_version();
-
-#if 0
 	TCHAR *pPartnerVersion = get_partner_sw_version();
 	tws_sw_version_t *pVersion;
 
@@ -196,5 +181,83 @@ void check_software_version()
 	pVersion->pPartner = pPartnerVersion;
 	/* 数据传递给主线程 */
 	dlg_update_status_data(STATE_TWS_VERSION_DATA, (void *)pVersion);
-#endif
+}
+
+
+
+
+// 获取用户版本号
+TCHAR * get_t1207_sw_version(BOOL left_ear)
+{
+	const char sw_left_version_data[] = "05 5A 04 00 07 1C 00 FF";		// 读取软件版本号
+	const char sw_right_version_data[] = "05 5A 04 00 07 1C 01 FF";		// 读取软件版本号
+	char* pcRecv = DBG_NEW char[4096];
+	INT retcode;
+	int i;
+	TCHAR *pVersion = NULL;
+	const char *sw_version_data;
+
+
+	memset(pcRecv, 0, 4096);
+
+	if (left_ear)
+	{
+		sw_version_data = sw_left_version_data;
+	}
+	else
+	{
+		sw_version_data = sw_right_version_data;
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+		retcode = CRYBT_SPPCommand(sw_version_data, pcRecv, 1000, TRUE);
+		Log_d(_T("send spp cmd retcode=%d"), retcode);
+		CString strSPPRecv(pcRecv);
+		CString strInfo;
+
+		pVersion = parse_sw_version_rsp(strSPPRecv);
+		strInfo.Format(_T("check sw version Recv: %s"),strSPPRecv);
+		dlg_update_ui(strInfo);
+
+		if (pVersion)
+		{
+			break;
+		}
+	}
+
+	//
+	delete pcRecv;
+	pcRecv = NULL;
+
+	return pVersion;
+}
+
+void check_t1207_software_version()
+{
+	TCHAR *pLeftVersion = get_t1207_sw_version(TRUE);
+	TCHAR *pRightVersion = get_t1207_sw_version(FALSE);
+	tws_sw_version_t *pVersion;
+
+	pVersion = (tws_sw_version_t *) DBG_NEW tws_sw_version_t[1];
+	if (!pVersion)
+	{
+		Log_e(_T("no memory error!"));
+		if (pLeftVersion)
+		{
+			delete pLeftVersion;
+		}
+
+		if (pRightVersion)
+		{
+			delete pRightVersion;
+		}
+
+		return;
+	}
+
+	pVersion->pAgent = pRightVersion;
+	pVersion->pPartner = pLeftVersion;
+	/* 数据传递给主线程 */
+	dlg_update_status_data(STATE_TWS_VERSION_DATA, (void *)pVersion);
 }

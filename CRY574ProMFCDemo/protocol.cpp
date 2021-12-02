@@ -963,7 +963,7 @@ UINT thread_process(LPVOID)
 	GPIBOpenDevice();
 	SetupChannelVoltage(5.0, CHANNEL_ONE);
 	EnableChannelVoltage(TRUE, CHANNEL_ONE);
-	Sleep(10000);			// Delay 5s
+	Sleep(5000);			// Delay 5s
 	EnableChannelVoltage(FALSE, CHANNEL_ONE);
 
 	for (i = 0; i < 10; i++)
@@ -1037,7 +1037,7 @@ UINT thread_process(LPVOID)
 #endif	
 	if (test_items & (1 << TEST_SW_VERSION_INDEX))
 	{
-		check_software_version();
+		check_t1207_software_version();
 	}
 
 #if 0

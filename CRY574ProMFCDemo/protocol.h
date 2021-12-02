@@ -401,6 +401,8 @@ int str2bindata(const char *str, char * outBuffer, int buf_len);
 
 void test0();
 
+void check_t1207_software_version();
+
 #ifdef __cplusplus
 }
 #endif
