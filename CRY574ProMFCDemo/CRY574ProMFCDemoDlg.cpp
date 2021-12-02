@@ -141,6 +141,7 @@ BEGIN_MESSAGE_MAP(CCRY574ProMFCDemoDlg, CDialogEx)
 	ON_WM_CTLCOLOR()
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BUTTON5, &CCRY574ProMFCDemoDlg::OnBnClickedButton5)
+	ON_BN_CLICKED(IDC_GPIB_TEST, &CCRY574ProMFCDemoDlg::OnBnClickedGpibTest)
 END_MESSAGE_MAP()
 
 
@@ -411,7 +412,7 @@ BOOL CCRY574ProMFCDemoDlg::OnInitDialog()
 
 		AfxMessageBox(_T("初始化失败，请检查DONGLE!"));
 
-		PostQuitMessage(0);
+		//PostQuitMessage(0);			// don't quit. by qinjiangwei 2021/11/25
 	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -1848,4 +1849,10 @@ void CCRY574ProMFCDemoDlg::OnBnClickedButton5()
 
 	SaveResultToFile();
 	UpdateData(FALSE);
+}
+
+
+void CCRY574ProMFCDemoDlg::OnBnClickedGpibTest()
+{
+	// TODO: 在此添加控件通知处理程序代码
 }

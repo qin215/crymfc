@@ -108,7 +108,7 @@ FUNC_DLL_EXPORT void enable_console_window()
 {
 	AllocConsole();
 	freopen( "CONOUT$","w",stdout);
-	printf("hello");			// for testing.
+	printf("hello test\n");			// for testing.
 }
 
 

@@ -154,4 +154,5 @@ public:
 
 	void SaveResultToFile();
 	afx_msg void OnBnClickedButton5();
+	afx_msg void OnBnClickedGpibTest();
 };
