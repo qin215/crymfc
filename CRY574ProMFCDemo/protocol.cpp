@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include "protocol.h"
 #include "mywin.h"
-
+#include "GPIB.h"
 
 
 BOOL bStopped = TRUE;
@@ -958,11 +958,15 @@ UINT thread_process(LPVOID)
 	bRunning = TRUE;
 
 	test0();
-
 	reset_partner_id();
 
-	//retcode = CRYBT_ResetDongle();
-	//Log_d(_T("reset dongle retcode=%d"), retcode);
+	GPIBOpenDevice();
+	SetupChannelVoltage(5.0, CHANNEL_ONE);
+	EnableChannelVoltage(TRUE, CHANNEL_ONE);
+	Sleep(10000);			// Delay 5s
+	EnableChannelVoltage(FALSE, CHANNEL_ONE);
+	//Sleep(5000);			// Delay 10s
+
 
 	for (i = 0; i < 10; i++)
 	{
@@ -1100,6 +1104,8 @@ disconn_bt:
 	dlg_update_status_ui(STATE_DONE);
 
 	t5506_send_uart_cmd(OPEN_BOX);
+
+	GPIBCloseDevice();
 
 	bRunning = FALSE;
 	return ret;

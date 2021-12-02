@@ -72,6 +72,9 @@
     <ClInclude Include="TestResult.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="GPIB.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CRY574ProMFCDemo.cpp">

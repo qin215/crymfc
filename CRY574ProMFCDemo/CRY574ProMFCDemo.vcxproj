@@ -216,6 +216,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TestResult.h" />
     <ClInclude Include="uart_cmd.h" />
+    <ClInclude Include="GPIB.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ColorStatic.cpp" />
