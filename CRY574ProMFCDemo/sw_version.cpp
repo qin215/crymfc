@@ -170,6 +170,8 @@ TCHAR * get_partner_sw_version()
 void check_software_version()
 {
 	TCHAR *pAgentVersion = get_agent_sw_version();
+
+#if 0
 	TCHAR *pPartnerVersion = get_partner_sw_version();
 	tws_sw_version_t *pVersion;
 
@@ -194,4 +196,5 @@ void check_software_version()
 	pVersion->pPartner = pPartnerVersion;
 	/* 数据传递给主线程 */
 	dlg_update_status_data(STATE_TWS_VERSION_DATA, (void *)pVersion);
+#endif
 }

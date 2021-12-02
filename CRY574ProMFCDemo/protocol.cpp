@@ -115,7 +115,7 @@ BOOL connect_bt_device(const CString& device)
 	} 
 	else
 	{
-		info.Format(_T("连接蓝牙(%s)错误： %d"),device, retCode);
+		info.Format(_T("连接蓝牙(%s)错误： %d"), device, retCode);
 	}
 	Log_d(_T("CRYBT_MacConnect retcode=%d"), retCode);
 	dlg_update_ui(info);
@@ -965,8 +965,6 @@ UINT thread_process(LPVOID)
 	EnableChannelVoltage(TRUE, CHANNEL_ONE);
 	Sleep(10000);			// Delay 5s
 	EnableChannelVoltage(FALSE, CHANNEL_ONE);
-	//Sleep(5000);			// Delay 10s
-
 
 	for (i = 0; i < 10; i++)
 	{
@@ -1030,19 +1028,19 @@ UINT thread_process(LPVOID)
 	Log_d(_T("begin to test bda(%s)"), current_bt_device);
 
 	int test_items = get_test_item_setting_bitmap();
-
+#if 0
 	if (test_items & (1 << TEST_PSENSOR_INDEX))
 	{
 		get_psensor_rawdata();			// 先获取psensor raw data.
 		check_psensor_calibrated_2();
-		//check_psensor_rawdata();
 	}
-	
+#endif	
 	if (test_items & (1 << TEST_SW_VERSION_INDEX))
 	{
 		check_software_version();
 	}
 
+#if 0
 	if (test_items & (1 << TEST_USER_MODE_INDEX))
 	{
 		check_tws_mode();		// 最后一个
@@ -1069,6 +1067,7 @@ UINT thread_process(LPVOID)
 		process_psensor_calibrate();
 	}
 
+#endif
 	Log_d(_T("test bda(%s) end."), current_bt_device);
 
 	ret = 0;
@@ -1096,9 +1095,6 @@ disconn_bt:
 	}
 	dlg_update_ui(info);
 	Log_d(_T("CRYBT_Disconnect retcode=%d"), retcode);
-
-	//retcode = CRYBT_ResetDongle();
-	//Log_d(_T("CRYBT_ResetDongle retcode=%d"), retcode);
 
 	dlg_update_ui(_T("done!"));
 	dlg_update_status_ui(STATE_DONE);
