@@ -1617,7 +1617,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		if (pVersion)
 		{
 			strVersion = CString(pVersion);
-			strPrompt = _T("Ö÷¶ú°æ±¾£º") +  strVersion + _T(",");
+			strPrompt = _T("ÓÒ¶ú°æ±¾£º") +  strVersion + _T(",");
 
 			if (strVersion == m_default_sw_version)
 			{
@@ -1629,7 +1629,7 @@ LRESULT CCRY574ProMFCDemoDlg::OnUpdateStatus(WPARAM wParam, LPARAM lParam)
 		if (pVersion)
 		{
 			strVersion = CString(pVersion);
-			strPrompt += _T("¸¶¶ú°æ±¾£º") + strVersion;
+			strPrompt += _T("×ó¶ú°æ±¾£º") + strVersion;
 
 			ret = ret && (strVersion == m_default_sw_version);
 		}

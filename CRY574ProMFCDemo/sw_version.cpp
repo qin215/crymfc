@@ -239,6 +239,16 @@ void check_t1207_software_version()
 	TCHAR *pRightVersion = get_t1207_sw_version(FALSE);
 	tws_sw_version_t *pVersion;
 
+	if (pLeftVersion)
+	{
+		Log_d(_T("left sw version:%s\n"), pLeftVersion);
+	}
+
+	if (pRightVersion)
+	{
+		Log_d(_T("right sw version:%s\n"), pRightVersion);
+	}
+
 	pVersion = (tws_sw_version_t *) DBG_NEW tws_sw_version_t[1];
 	if (!pVersion)
 	{
